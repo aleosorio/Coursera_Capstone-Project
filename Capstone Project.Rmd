@@ -6,25 +6,53 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set
+library(tidyverse)
+library(stringr)
 ```
 
-## R Markdown
+## I. Appendix 1: Obtaining and Cleaning Data
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+### I.a. Reading Data
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+Twitter:
+```{r, echo = TRUE}
+con <- file("en_US.twitter.txt", "r")
+datatwitter <- data_frame(TEXT = readLines(con))
+close(con)
 ```
 
-## Including Plots
+Given the warning, the dimensions of both the obtained tibble and the original file, were compared.  They were equal.  Additionally, after some basic visual comparisons (head, tail, str), it was concluded that the obtained tibble was ok to work with (content type -NAs for example- not considered an issue yet).
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Blogs:
+```{r, echo = TRUE}
+con <- file("en_US.blogs.txt", "r")
+datablogs <- data_frame(TEXT = readLines(con))
+close(con)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+News:
+```{r, echo = TRUE}
+con <- file("en_US.news.txt", "r")
+datanews_err <- data_frame(TEXT = readLines(con))
+close(con)
+```
+
+Given the warning, the dimensions of both the obtained tibble and the original file, were compared.  The total number of lines obtained with the tibble (77,259) were much less than the ones from the original txt file (1,010,242).  Therefore, some cleaning was required, as follows.
+
+### I.b. Cleaning Data
+
+Further analysis to the "news" dataset, showed that line 77,259 was cut at the character "1", when compared to the one from the original file ("Ultra Edit" text editor was used for reading the original dataset, as well as the next cleaning steps). Therefore line 77,259 was analysed and showed a character "", between texts "1" and "gallons" within the phrase "producing 1 gallons".  Said character was deleted and the process re-run.  The result was a tibble with 766,277 rows (still less than the original file).  Character "", between texts "in" and "- inch" within the phrase "pears in - inch slices.", in row 766.277, was deleted and the process re-run. Again, fewer rows were obtained (926,143).  Character "", between texts "in" and "-inch" within the phrase "Slice in -inch-thick pieces", in row 926,143, was also deleted and the process re-run. Still, but last, fewer rows were obtained (948,564).  Character "", between texts "1" and "pounds" within the phrase "call for 1  pounds of tomatoes", in row 926,143, was also deleted and the process re-run again.  Finally, 1,010,242 lines were obtained from the final fixed file, as follows:
+
+```{r, echo = TRUE}
+con <- file("en_US.news_FINAL.txt", "r")
+datanews <- data_frame(TEXT = readLines(con))
+close(con)
+glimpse(datanews)
+```
+
+With this result, the cleaning stage was considered finished.
+
+## II, Appendix 2: Preliminary Analysis
+
+### II.a. 
