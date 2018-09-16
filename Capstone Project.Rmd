@@ -11,7 +11,7 @@ library(tidyverse)
 library(stringr)
 ```
 
-## I. Appendix 1: Obtaining and Cleaning Data
+## I. Appendix 1: Getting and Cleaning Data
 
 ### I.a. Reading Data
 
@@ -22,7 +22,7 @@ datatwitter <- data_frame(TEXT = readLines(con))
 close(con)
 ```
 
-Given the warning, the dimensions of both the obtained tibble and the original file, were compared.  They were equal.  Additionally, after some basic visual comparisons (head, tail, str), it was concluded that the obtained tibble was ok to work with (content type -NAs for example- not considered an issue yet).
+Given the warning, the dimensions of both the obtained tibble and the original file, were compared.  They were equal.  Additionally, after some basic visual comparisons (head, tail, str, is.na), it was concluded that the obtained tibble was ok to work with.
 
 #### Blogs Dataset
 ```{r, echo = TRUE}
@@ -30,6 +30,8 @@ con <- file("en_US.blogs.txt", "r")
 datablogs <- data_frame(TEXT = readLines(con))
 close(con)
 ```
+
+After the same basic visual comparisons (head, tail, str, is.na) used with the previous dataset, it was concluded that the obtained tibble was also ok to work with.
 
 #### News Dataset
 ```{r, echo = TRUE}
@@ -51,11 +53,38 @@ close(con)
 glimpse(datanews)
 ```
 
-With this result, the cleaning stage was considered finished.
+With this result, plus the same basic visual comparisons (head, tail, str, is.na) used with the previous datasets, it was concluded that the obtained tibble was also ok to work with and therefore the cleaning stage was considered finished.
+
+### I.c. Preparing Preliminary Datasets
+
+In order to work with sets words, each line of the obtained datasets was converted into a list of separate-underscore-words, as follows:
+
+```{r, echo = TRUE}
+words_twitter <- datatwitter$TEXT %>%
+        str_to_lower() %>%
+        str_extract_all(., boundary("word"))
+words_blogs <- datablogs$TEXT %>%
+        str_to_lower() %>%
+        str_extract_all(., boundary("word"))
+words_news <- datanews$TEXT %>%
+        str_to_lower() %>%
+        str_extract_all(., boundary("word"))
+```
+
+An example of the results obtained:
+
+```{r}
+head(words_twitter, 2)
+```
 
 ## II, Appendix 2: Preliminary Analysis
 
 ### II.a. Twitter Dataset
+
+Word Count
+```{r, echo = TRUE}
+str_count(datatwitter$TEXT, boundary("word"))
+```
 
 ### II.b. Blogs Dataset
 
