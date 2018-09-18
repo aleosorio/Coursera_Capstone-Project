@@ -79,6 +79,25 @@ head(words_twitter, 2)
 
 ## II, Appendix 2: Preliminary Analysis
 
+### II.a. Basic Analysis Functions
+
+#### Single words frequency counter
+
+Frequency within a single row:
+
+```{r}
+rowordfrec <- function(dataset = prueba, rownum = 3) {
+        uniquewordset <- unique(dataset[[rownum]])
+        for(i in seq_along(uniquewords)) {
+                uniqueword <- paste("\\b", uniquewordset[i], "\\b", sep = "")
+                uniquewordfrec <- str_count(dataset[[rownum]], uniqueword)
+                print(uniqueword)
+                print(uniquewordfrec)
+        }
+}
+```
+
+
 ### II.a. Twitter Dataset
 
 Word Count
