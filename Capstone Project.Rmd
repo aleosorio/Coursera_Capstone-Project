@@ -90,8 +90,8 @@ rowordfrec <- function(dataset = prueba, rownum = 3) {
         uniquewordset <- unique(dataset[[rownum]])
         for(i in seq_along(uniquewords)) {
                 uniqueword <- paste("\\b", uniquewordset[i], "\\b", sep = "")
-                uniquewordfrec <- str_count(dataset[[rownum]], uniqueword)
-                print(uniqueword)
+                uniquewordfrec <- str_count(dataset[rownum], uniqueword)
+                print(uniquewordset[i])
                 print(uniquewordfrec)
         }
 }
