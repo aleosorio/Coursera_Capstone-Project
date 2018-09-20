@@ -88,15 +88,21 @@ Function that returns a dataframe with two columns (unique word and its frequenc
 ```{r}
 wordrowfreq <- function(dataset, rownum) {
         rowfreq <- data_frame(word = character(), freq = numeric())
-        uniquewordset <- unique(dataset[[rownum]])
-        for(i in seq_along(uniquewordset)) {
-                uniqueword <- paste("\\b", uniquewordset[i], "\\b", sep = "")
+        uniquewordsrow <- unique(dataset[[rownum]])
+        for(i in seq_along(uniquewordsrow)) {
+                uniqueword <- paste("\\b", uniquewordsrow[i], "\\b", sep = "")
                 uniquewordfreq <- str_count(dataset[rownum], uniqueword)
-                rowfreq[i,1] <- uniquewordset[i]
+                rowfreq[i,1] <- uniquewordsrow[i]
                 rowfreq[i,2] <- uniquewordfreq
         }
         return(rowfreq)
 }
+```
+
+As an example follows an extract of the results obtained using 3rd row of news data:
+
+```{r}
+head(wordrowfreq(dataset = words_news, rownum = 3), 3)
 ```
 
 #### Multirow word frequency counter
@@ -115,6 +121,70 @@ wordsetfreq <- function(dataset) {
                 arrange(., desc(freq))
         return(setfreq)
 }
+```
+
+As an example follows an extract of the results obtained using rows 1 through 3 of news data:
+
+```{r}
+head(wordsetfreq(dataset = words_news[1:3]), 3)
+```
+
+#### Single row 2-grams generator
+
+Function that returns a dataframe with all 2-grams per row
+
+```{r}
+twogramrow <- function(dataset, rownum) {
+        twograms <- data_frame(twograms = character())
+        if(length(dataset[[rownum]]) < 2) {
+                twograms <- NA
+        } else {
+                qngrams <- length(dataset[[rownum]])-1
+                for(j in 1:qngrams) {
+                        twograms[j,1] <- paste(dataset[[rownum]][[j]], dataset[[rownum]][[j+1]], sep = " ")
+                }
+        }
+        return(twograms)
+}
+```
+
+As an example follows an extract of the results obtained using 3rd row of news data:
+
+```{r}
+head(twogramrow(dataset = words_news, rownum = 3), 3)
+```
+
+#### Single row 3-grams generator
+
+Function that returns a list of 3-grams per row
+
+```{r}
+threegramrow <- function(dataset, rownum) {
+        threegrams <- data_frame(threegrams = character())
+        if(length(dataset[[rownum]]) < 3) {
+                threegrams <- NA
+        } else {
+                qngrams <- length(dataset[[rownum]])-2
+                for(j in 1:qngrams) {
+                        threegrams[j,1] <- paste(dataset[[rownum]][[j]], dataset[[rownum]][[j+1]], dataset[[rownum]][[j+2]], sep = " ")
+                }
+        }
+        return(threegrams)
+}
+```
+
+As an example follows an extract of the results obtained using 3rd row of news data:
+
+```{r}
+head(threegramrow(dataset = words_news, rownum = 3), 3)
+```
+
+#### Multirow 2-grams frequency counter
+
+Function that returns a dataframe with two columns (2-grams and their frequency within given dataset).
+
+```{r}
+
 ```
 
 ### II.b. Results Obtained by Dataset
