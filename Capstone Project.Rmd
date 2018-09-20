@@ -88,13 +88,15 @@ Frequency within a single row:
 ```{r}
 rowordfrec <- function(dataset = prueba, rownum = 3) {
         uniquewordset <- unique(dataset[[rownum]])
-        for(i in seq_along(uniquewords)) {
+        rowstats <<- data_frame()
+        for(i in seq_along(uniquewordset)) {
                 uniqueword <- paste("\\b", uniquewordset[i], "\\b", sep = "")
                 uniquewordfrec <- str_count(dataset[rownum], uniqueword)
-                print(uniquewordset[i])
-                print(uniquewordfrec)
+                rowstats[i,1] <<- uniquewordset[i]
+                rowstats[i,2] <<- uniquewordfrec
+                }
+        names(rowstats) <<- c("word", "freq")
         }
-}
 ```
 
 
