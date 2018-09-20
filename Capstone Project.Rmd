@@ -81,63 +81,74 @@ head(words_twitter, 2)
 
 ### II.a. Basic Analysis Functions
 
-#### Single words frequency counter
+#### Single row word frequency counter
 
-Frequency within a single row:  Function that returns a dataframe with two columns (unique word and its frequency within given row).
+Function that returns a dataframe with two columns (unique word and its frequency within given row).
 
 ```{r}
-frecwordrow <- function(dataset, rownum) {
-        wordrow <- data_frame(word = character(), freq = numeric())
+wordrowfreq <- function(dataset, rownum) {
+        rowfreq <- data_frame(word = character(), freq = numeric())
         uniquewordset <- unique(dataset[[rownum]])
         for(i in seq_along(uniquewordset)) {
                 uniqueword <- paste("\\b", uniquewordset[i], "\\b", sep = "")
-                uniquewordfrec <- str_count(dataset[rownum], uniqueword)
-                wordrow[i,1] <- uniquewordset[i]
-                wordrow[i,2] <- uniquewordfrec
+                uniquewordfreq <- str_count(dataset[rownum], uniqueword)
+                rowfreq[i,1] <- uniquewordset[i]
+                rowfreq[i,2] <- uniquewordfreq
         }
-        return(wordrow)
+        return(rowfreq)
 }
 ```
 
-Frequency within a dataset:  Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (wordfrequency) was grouped by words, summarized and arranged by frequency in order to easily visualize the most frequent words within each dataset.
+#### Multirow word frequency counter
+
+Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (wordfrequency) was grouped by words, summarized and arranged by frequency in order to easily visualize the most frequent words within each dataset.
 
 ```{r}
-frecwordset <- function(dataset) {
-        wordset <- data_frame(word = character(), freq = numeric())
+wordsetfreq <- function(dataset) {
+        setfreq <- data_frame(word = character(), freq = numeric())
         for(i in seq_along(dataset)) {
-               wordset <- bind_rows(wordset, frecwordrow(dataset, rownum = i))
+               setfreq <- bind_rows(setfreq, wordrowfreq(dataset, rownum = i))
         }
-        wordfrequency <<- wordset %>%
+        setfreq <- setfreq %>%
                 group_by(word) %>%
                 summarize (., freq = sum(freq)) %>%
                 arrange(., desc(freq))
+        return(setfreq)
 }
 ```
 
 ### II.b. Results Obtained by Dataset
 
-Twitter dataset: once the word frequency function was applied to the first 1,000 rows of the dataset, the following result was obtained.
+#### Twitter dataset
+
+Once the word frequency function was applied to the first 1,000 rows of the dataset, the following result was obtained.
+
 ```{r, echo = TRUE}
-frecwordset(dataset = words_twitter[1:1000])
-head(wordfrequency)
+freqword_twitter <- wordsetfreq(dataset = words_twitter[1:1000])
+head(freqword_twitter)
 
 ```
 
-Blogs dataset: likewise, the following result was obtained.
+#### Blogs dataset
+
+Likewise, the following result was obtained.
+
 ```{r, echo = TRUE}
-frecwordset(dataset = words_blogs[1:1000])
-head(wordfrequency)
+freqword_blogs <- wordsetfreq(dataset = words_blogs[1:1000])
+head(freqword_blogs)
 
 ```
 
+#### News dataset
 
-News dataset: finally, the following result was obtained for the news dataset.
+Finally, the following result was obtained for the news dataset.
+
 ```{r, echo = TRUE}
-frecwordset(dataset = words_news[1:1000])
-head(wordfrequency)
+freqword_news <- wordsetfreq(dataset = words_news[1:1000])
+head(freqword_news)
 
 ```
 
-It was interesting to oberve that words such as "the", "to", "a", "and" were the most frequent ones throughout all datasets.
+Worth noting that words such as "the", "to", "a", "and" were the most frequent ones throughout all datasets.
 
 
