@@ -83,30 +83,61 @@ head(words_twitter, 2)
 
 #### Single words frequency counter
 
-Frequency within a single row:
+Frequency within a single row:  Function that returns a dataframe with two columns (unique word and its frequency within given row).
 
 ```{r}
-rowordfrec <- function(dataset = prueba, rownum = 3) {
+frecwordrow <- function(dataset, rownum) {
+        wordrow <- data_frame(word = character(), freq = numeric())
         uniquewordset <- unique(dataset[[rownum]])
-        rowstats <<- data_frame()
         for(i in seq_along(uniquewordset)) {
                 uniqueword <- paste("\\b", uniquewordset[i], "\\b", sep = "")
                 uniquewordfrec <- str_count(dataset[rownum], uniqueword)
-                rowstats[i,1] <<- uniquewordset[i]
-                rowstats[i,2] <<- uniquewordfrec
-                }
-        names(rowstats) <<- c("word", "freq")
+                wordrow[i,1] <- uniquewordset[i]
+                wordrow[i,2] <- uniquewordfrec
         }
+        return(wordrow)
+}
 ```
 
+Frequency within a dataset:  Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (wordfrequency) was grouped by words, summarized and arranged by frequency in order to easily visualize the most frequent words within each dataset.
 
-### II.a. Twitter Dataset
+```{r}
+frecwordset <- function(dataset) {
+        wordset <- data_frame(word = character(), freq = numeric())
+        for(i in seq_along(dataset)) {
+               wordset <- bind_rows(wordset, frecwordrow(dataset, rownum = i))
+        }
+        wordfrequency <<- wordset %>%
+                group_by(word) %>%
+                summarize (., freq = sum(freq)) %>%
+                arrange(., desc(freq))
+}
+```
 
-Word Count
+### II.b. Results Obtained by Dataset
+
+Twitter dataset: once the word frequency function was applied to the first 1,000 rows of the dataset, the following result was obtained.
 ```{r, echo = TRUE}
-str_count(datatwitter$TEXT, boundary("word"))
+frecwordset(dataset = words_twitter[1:1000])
+head(wordfrequency)
+
 ```
 
-### II.b. Blogs Dataset
+Blogs dataset: likewise, the following result was obtained.
+```{r, echo = TRUE}
+frecwordset(dataset = words_blogs[1:1000])
+head(wordfrequency)
 
-### II.c. News Dataset
+```
+
+
+News dataset: finally, the following result was obtained for the news dataset.
+```{r, echo = TRUE}
+frecwordset(dataset = words_news[1:1000])
+head(wordfrequency)
+
+```
+
+It was interesting to oberve that words such as "the", "to", "a", "and" were the most frequent ones throughout all datasets.
+
+
