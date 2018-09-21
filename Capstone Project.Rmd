@@ -119,6 +119,25 @@ As an example follows an extract of the results obtained using 3rd row of news d
 head(wordrowfreq(dataset = words_news, rownum = 3), 3)
 ```
 
+Version 2.0 (lower case paragraph based) PENDIENTE CORREGIR #$%& UNIQUE (NO FUNCIONA)
+
+```{r}
+wordrowfreq2 <- function(dataset, rownum) {
+        rowfreq <- data_frame(word = character(), freq = numeric())
+        uniquewordsrow <- dataset[[rownum]] %>%
+                str_extract_all(., boundary("word")) %>%
+                unique()
+        for(i in seq_along(uniquewordsrow)) {
+                uniqueword <- paste("\\b", uniquewordsrow[i], "\\b", sep = "")
+                uniquewordfreq <- str_count(dataset[rownum], uniqueword)
+                rowfreq[i,1] <- uniquewordsrow[i]
+                rowfreq[i,2] <- uniquewordfreq
+        }
+        return(rowfreq)
+}
+```
+
+
 #### Multirow word frequency counter
 
 Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (wordfrequency) was grouped by words, summarized and arranged by frequency in order to easily visualize the most frequent words within each dataset.
@@ -158,7 +177,7 @@ twogramrow <- function(dataset, rownum) {
                         twograms[j,1] <- paste(dataset[[rownum]][[j]], dataset[[rownum]][[j+1]], sep = " ")
                 }
         }
-        return(twograms)
+        return(unique(twograms))
 }
 ```
 
@@ -166,6 +185,32 @@ As an example follows an extract of the results obtained using 3rd row of news d
 
 ```{r, echo = FALSE}
 head(twogramrow(dataset = words_news, rownum = 3), 3)
+```
+
+#### Single row 2-grams frequency counter
+
+Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (twogramsfreq) was grouped by two-grams, summarized and arranged by frequency in order to easily visualize the most frequent ones within each dataset.
+
+```{r}
+twogramrowfreq <- function(dataset, rownum) {
+        rowfreq <- data_frame(word = character(), freq = numeric())
+        uniquetwogramsrow <- twogramrow(dataset, rownum)
+        stringrow <- dataset[[rownum]] %>%
+                        paste(., collapse = " ")
+        for(i in seq_along(uniquetwogramsrow[[1]])) {
+                uniquetwogram <- paste("\\b", uniquetwogramsrow[i,1], "\\b", sep = "")
+                uniquetwogramfreq <- str_count(stringrow, uniquetwogram)
+                rowfreq[i,1] <- uniquetwogramsrow[i,1]
+                rowfreq[i,2] <- uniquetwogramfreq
+        }
+        return(rowfreq)
+}
+```
+
+As an example follows an extract of the results obtained using 3rd row of news data:
+
+```{r, echo = FALSE}
+head(twogramrowfreq(dataset = words_news, rownum= 3), 3)
 ```
 
 #### Single row 3-grams generator
@@ -183,7 +228,7 @@ threegramrow <- function(dataset, rownum) {
                         threegrams[j,1] <- paste(dataset[[rownum]][[j]], dataset[[rownum]][[j+1]], dataset[[rownum]][[j+2]], sep = " ")
                 }
         }
-        return(threegrams)
+        return(unique(threegrams))
 }
 ```
 
@@ -191,6 +236,32 @@ As an example follows an extract of the results obtained using 3rd row of news d
 
 ```{r, echo = FALSE}
 head(threegramrow(dataset = words_news, rownum = 3), 3)
+```
+
+#### Single row 3-grams frequency counter
+
+Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (twogramsfreq) was grouped by three-grams, summarized and arranged by frequency in order to easily visualize the most frequent ones within each dataset.
+
+```{r}
+threegramrowfreq <- function(dataset, rownum) {
+        rowfreq <- data_frame(word = character(), freq = numeric())
+        uniquethreegramsrow <- threegramrow(dataset, rownum)
+        stringrow <- dataset[[rownum]] %>%
+                        paste(., collapse = " ")
+        for(i in seq_along(uniquethreegramsrow[[1]])) {
+                uniquethreegram <- paste("\\b", uniquethreegramsrow[i,1], "\\b", sep = "")
+                uniquethreegramfreq <- str_count(stringrow, uniquethreegram)
+                rowfreq[i,1] <- uniquethreegramsrow[i,1]
+                rowfreq[i,2] <- uniquethreegramfreq
+        }
+        return(rowfreq)
+}
+```
+
+As an example follows an extract of the results obtained using 3rd row of news data:
+
+```{r, echo = FALSE}
+head(threegramrowfreq(dataset = words_news, rownum= 3), 3)
 ```
 
 ### II.b. Results Obtained by Dataset
@@ -209,7 +280,6 @@ head(freqword_twitter)
 ```{r, echo = FALSE}
 barplot(names.arg = head(freqword_twitter)$word, height = head(freqword_twitter)$freq)
 ```
-
 
 #### Blogs dataset
 
