@@ -75,13 +75,13 @@ In order to work with sets words, each line of the obtained datasets was convert
 
 ```{r, cache = TRUE}
 words_twitter <- datatwitter$TEXT %>%
-        str_to_lower() %>%
+        map_chr(., str_to_lower) %>%
         str_extract_all(., boundary("word"))
 words_blogs <- datablogs$TEXT %>%
-        str_to_lower() %>%
+        map_chr(., str_to_lower) %>%
         str_extract_all(., boundary("word"))
 words_news <- datanews$TEXT %>%
-        str_to_lower() %>%
+        map_chr(., str_to_lower) %>%
         str_extract_all(., boundary("word"))
 ```
 
@@ -102,7 +102,8 @@ Function that returns a dataframe with two columns (unique word and its frequenc
 ```{r}
 wordrowfreq <- function(dataset, rownum) {
         rowfreq <- data_frame(word = character(), freq = numeric())
-        uniquewordsrow <- unique(dataset[[rownum]])
+        uniquewordsrow <- dataset[[rownum]] %>%
+                unique()
         for(i in seq_along(uniquewordsrow)) {
                 uniqueword <- paste("\\b", uniquewordsrow[i], "\\b", sep = "")
                 uniquewordfreq <- str_count(dataset[rownum], uniqueword)
@@ -118,25 +119,6 @@ As an example follows an extract of the results obtained using 3rd row of news d
 ```{r, echo = FALSE}
 head(wordrowfreq(dataset = words_news, rownum = 3), 3)
 ```
-
-Version 2.0 (lower case paragraph based) PENDIENTE CORREGIR #$%& UNIQUE (NO FUNCIONA)
-
-```{r}
-wordrowfreq2 <- function(dataset, rownum) {
-        rowfreq <- data_frame(word = character(), freq = numeric())
-        uniquewordsrow <- dataset[[rownum]] %>%
-                str_extract_all(., boundary("word")) %>%
-                unique()
-        for(i in seq_along(uniquewordsrow)) {
-                uniqueword <- paste("\\b", uniquewordsrow[i], "\\b", sep = "")
-                uniquewordfreq <- str_count(dataset[rownum], uniqueword)
-                rowfreq[i,1] <- uniquewordsrow[i]
-                rowfreq[i,2] <- uniquewordfreq
-        }
-        return(rowfreq)
-}
-```
-
 
 #### Multirow word frequency counter
 
@@ -213,9 +195,33 @@ As an example follows an extract of the results obtained using 3rd row of news d
 head(twogramrowfreq(dataset = words_news, rownum= 3), 3)
 ```
 
+#### Multirow 2-grams frequency counter
+
+Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (twogramfreq) was grouped by words, summarized and arranged by frequency in order to easily visualize the most frequent two_grams within each dataset.
+
+```{r}
+twogramsetfreq <- function(dataset) {
+        setfreq <- data_frame(word = character(), freq = numeric())
+        for(i in seq_along(dataset)) {
+               setfreq <- bind_rows(setfreq, twogramrowfreq(dataset, rownum = i))
+        }
+        setfreq <- setfreq %>%
+                group_by(word) %>%
+                summarize (., freq = sum(freq)) %>%
+                arrange(., desc(freq))
+        return(setfreq)
+}
+```
+
+As an example follows an extract of the results obtained using rows 1 through 3 of news data:
+
+```{r, echo = FALSE}
+head(twogramsetfreq(dataset = words_news[1:5]), 5)
+```
+
 #### Single row 3-grams generator
 
-Function that returns a list of 3-grams per row.
+Function that returns a list of 3-grams per row, using the same mechanics of the 2-grams generator.
 
 ```{r}
 threegramrow <- function(dataset, rownum) {
@@ -240,7 +246,7 @@ head(threegramrow(dataset = words_news, rownum = 3), 3)
 
 #### Single row 3-grams frequency counter
 
-Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (twogramsfreq) was grouped by three-grams, summarized and arranged by frequency in order to easily visualize the most frequent ones within each dataset.
+Function that uses the same mechanics of the single row 2-grams frequency counter, applied to the 3-grams generator.
 
 ```{r}
 threegramrowfreq <- function(dataset, rownum) {
@@ -264,9 +270,31 @@ As an example follows an extract of the results obtained using 3rd row of news d
 head(threegramrowfreq(dataset = words_news, rownum= 3), 3)
 ```
 
-### II.b. Results Obtained by Dataset
+#### Multirow 3-grams frequency counter
 
-When preparing the present preliminary analysis, word frequency was the only available indicator.  Following reports will include additional indicators. 
+Function that nested the previous function, within a loop along the length of the dataset.  The returned dataset (threegramfreq) was grouped by words, summarized and arranged by frequency in order to easily visualize the most frequent two_grams within each dataset.
+
+```{r}
+threegramsetfreq <- function(dataset) {
+        setfreq <- data_frame(word = character(), freq = numeric())
+        for(i in seq_along(dataset)) {
+               setfreq <- bind_rows(setfreq, threegramrowfreq(dataset, rownum = i))
+        }
+        setfreq <- setfreq %>%
+                group_by(word) %>%
+                summarize (., freq = sum(freq)) %>%
+                arrange(., desc(freq))
+        return(setfreq)
+}
+```
+
+As an example follows an extract of the results obtained using rows 1 through 3 of news data:
+
+```{r, echo = FALSE}
+head(threegramsetfreq(dataset = words_news[1:5]), 5)
+```
+
+### II.b. Results Obtained by Dataset
 
 #### Twitter dataset
 
@@ -281,9 +309,31 @@ head(freqword_twitter)
 barplot(names.arg = head(freqword_twitter)$word, height = head(freqword_twitter)$freq)
 ```
 
+Likewise, when counting two-grams frequencies:
+
+```{r, cache = TRUE}
+freqtwograms_twitter <- twogramsetfreq(dataset = words_twitter[1:1000])
+head(freqtwograms_twitter)
+```
+
+```{r, echo = FALSE}
+barplot(names.arg = head(freqtwograms_twitter)$word, height = head(freqtwograms_twitter)$freq)
+```
+
+Finally, when counting three-grams frequencies:
+
+```{r, cache = TRUE}
+freqthreegrams_twitter <- threegramsetfreq(dataset = words_twitter[1:1000])
+head(freqthreegrams_twitter)
+```
+
+```{r, echo = FALSE}
+barplot(names.arg = head(freqthreegrams_twitter)$word, height = head(freqthreegrams_twitter)$freq)
+```
+
 #### Blogs dataset
 
-Likewise, the following result was obtained.
+The following word frequency results were obtained.
 
 ```{r, cache = TRUE}
 freqword_blogs <- wordsetfreq(dataset = words_blogs[1:1000])
@@ -292,6 +342,28 @@ head(freqword_blogs)
 
 ```{r, echo = FALSE}
 barplot(names.arg = head(freqword_blogs)$word, height = head(freqword_blogs)$freq)
+```
+
+Likewise, when counting two-grams frequencies:
+
+```{r, cache = TRUE}
+freqtwograms_blogs <- twogramsetfreq(dataset = words_blogs[1:1000])
+head(freqtwograms_blogs)
+```
+
+```{r, echo = FALSE}
+barplot(names.arg = head(freqtwograms_blogs)$word, height = head(freqtwograms_blogs)$freq)
+```
+
+Finally, when counting three-grams frequencies:
+
+```{r, cache = TRUE}
+freqthreegrams_blogs <- threegramsetfreq(dataset = words_blogs[1:1000])
+head(freqthreegrams_blogs)
+```
+
+```{r, echo = FALSE}
+barplot(names.arg = head(freqthreegrams_blogs)$word, height = head(freqthreegrams_blogs)$freq)
 ```
 
 #### News dataset
@@ -306,4 +378,26 @@ head(freqword_news)
 
 ```{r, echo = FALSE}
 barplot(names.arg = head(freqword_news)$word, height = head(freqword_news)$freq)
+```
+
+Likewise, when counting two-grams frequencies:
+
+```{r, cache = TRUE}
+freqtwograms_news <- twogramsetfreq(dataset = words_news[1:1000])
+head(freqtwograms_news)
+```
+
+```{r, echo = FALSE}
+barplot(names.arg = head(freqtwograms_news)$word, height = head(freqtwograms_news)$freq)
+```
+
+Finally, when counting three-grams frequencies:
+
+```{r, cache = TRUE}
+freqthreegrams_news <- threegramsetfreq(dataset = words_news[1:1000])
+head(freqthreegrams_news)
+```
+
+```{r, echo = FALSE}
+barplot(names.arg = head(freqthreegrams_news)$word, height = head(freqthreegrams_news)$freq)
 ```
