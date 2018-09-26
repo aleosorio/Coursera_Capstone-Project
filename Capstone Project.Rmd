@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set
 library(tidyverse)
 library(stringr)
+library(caret)
 ```
 
 ## Executive Summary
@@ -91,7 +92,7 @@ An example of the results obtained:
 head(words_twitter, 2)
 ```
 
-## II, Appendix 2: Preliminary Analysis
+## II. Appendix 2: Preliminary Analysis
 
 ### II.a. Basic Analysis Functions
 
@@ -172,9 +173,9 @@ head(ngramrowfreq(ngram = 2, dataset = words_news, rownum= 3), 5)
 head(ngramrowfreq(ngram = 3, dataset = words_news, rownum= 3), 5)
 ```
 
-#### Multirow n-grams frequency counter
+#### Multirow n-grams frequency counter and probability calculator
 
-Function that nested the previous function, within a loop along the length of the dataset.  The returned data frame was grouped by words, summarized and arranged by frequency in order to easily visualize the most frequent n_grams within each dataset.
+Function that nested the previous function, within a loop along the length of the dataset.  The returned data frame was grouped by n-gram, summarized and arranged by frequency.  Additionally, it calculated the probability or occurence of each n-gram within that dataset.
 
 ```{r}
 ngramsetfreq <- function(ngram, dataset) {
@@ -185,7 +186,8 @@ ngramsetfreq <- function(ngram, dataset) {
         setfreq <- setfreq %>%
                 group_by(word) %>%
                 summarize (., freq = sum(freq)) %>%
-                arrange(., desc(freq))
+                arrange(., desc(freq)) %>%
+                mutate(., prob = freq/sum(freq))
         return(setfreq)
 }
 ```
@@ -216,30 +218,18 @@ Applying the Multirow n-grams frequency counter to the first 1,000 rows of the d
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqword_twitter <- ngramsetfreq(ngram = 1, dataset = words_twitter[1:1000])
-head(freqword_twitter)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqword_twitter)$word, height = head(freqword_twitter)$freq)
 ```
 
 2-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqtwograms_twitter <- ngramsetfreq(ngram = 2, dataset = words_twitter[1:1000])
-head(freqtwograms_twitter)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqtwograms_twitter)$word, height = head(freqtwograms_twitter)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqthreegrams_twitter <- ngramsetfreq(ngram = 3, dataset = words_twitter[1:1000])
-head(freqthreegrams_twitter)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqthreegrams_twitter)$word, height = head(freqthreegrams_twitter)$freq)
 ```
 
@@ -250,30 +240,18 @@ Likewise, the following results were obtained.
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqword_blogs <- ngramsetfreq(ngram = 1, dataset = words_blogs[1:1000])
-head(freqword_blogs)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqword_blogs)$word, height = head(freqword_blogs)$freq)
 ```
 
 2-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqtwograms_blogs <- ngramsetfreq(ngram = 2, dataset = words_blogs[1:1000])
-head(freqtwograms_blogs)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqtwograms_blogs)$word, height = head(freqtwograms_blogs)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqthreegrams_blogs <- ngramsetfreq(ngram = 3, dataset = words_blogs[1:1000])
-head(freqthreegrams_blogs)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqthreegrams_blogs)$word, height = head(freqthreegrams_blogs)$freq)
 ```
 
@@ -284,29 +262,94 @@ Finally, the following results were obtained for the news dataset.
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqword_news <- ngramsetfreq(ngram = 1, dataset = words_news[1:1000])
-head(freqword_news)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqword_news)$word, height = head(freqword_news)$freq)
 ```
 
 2-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqtwograms_news <- ngramsetfreq(ngram = 2, dataset = words_news[1:1000])
-head(freqtwograms_news)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqtwograms_news)$word, height = head(freqtwograms_news)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqthreegrams_news <- ngramsetfreq(ngram = 3, dataset = words_news[1:1000])
-head(freqthreegrams_news)
-```
-
-```{r, echo = FALSE}
 barplot(names.arg = head(freqthreegrams_news)$word, height = head(freqthreegrams_news)$freq)
 ```
+
+## III. Appendix 3: Predictive Model
+
+### III.a. Training Sets
+
+#### Primary Set
+
+The training set was built by mixing a fixed % of each of the three datasets, as follows:
+```{r}
+set.seed(123)
+sampletrain <- c(sample(words_blogs, 1000), sample(words_news, 1000), sample(words_twitter, 1000))
+```
+
+#### n-gram Sets
+
+The following sets were pre-calculated, in order to run the predictive algorithm as an n-gram search machine.  An extra column was added, with the corresponding ngram dimension.  Finally, the sets were bound into one n-gram set (samplengram).
+
+2-gram:
+```{r, cache = TRUE}
+sample2gram <- ngramsetfreq(ngram = 2, dataset = sampletrain) %>%
+        mutate(., ngram = 2)
+```
+
+3-gram:
+```{r, cache = TRUE}
+sample3gram <- ngramsetfreq(ngram = 3, dataset = sampletrain) %>%
+        mutate(., ngram = 3)
+```
+
+Total n-gram set:
+```{r, cache = TRUE}
+samplengram <- bind_rows(sample2gram, sample3gram)
+```
+
+
+### III.b. Predictive Functions
+
+#### Function that converts a string into a character vector of lowercase words
+
+```{r}
+stringtovector <- function(string) {
+        string <- string %>%
+                map_chr(., str_to_lower) %>%
+                str_extract_all(., boundary("word"))
+        return(string[[1]])
+}
+```
+
+#### Function that determines the dimension of the n-gram to predict with
+
+Input: The previous function's output.  If the length of the input is n, the output will be n+1.
+```{r}
+ngramdim <- function(string) {
+        string <- stringtovector(string)
+        n <- length(string) +1
+        return(n)
+}
+```
+
+#### Function that, given a string, selects the n-grams from which to predict the next word
+
+The n-grams from which to predict were searched from the previously pre-calculated n-gram sets (based on the training dataset), as follows:
+```{r}
+ngrampred <- function(string) {
+        n <- ngramdim(string)
+        stringsearch <- paste("^", string, "\\b", sep="")
+        ngramset <- samplengram %>%
+                filter(., ngram == n & str_detect(word, stringsearch))
+        return(ngramset)
+}
+```
+
+As an example, if applied with the word "to":
+```{r}
+head(ngrampred("to"))
+```
+
