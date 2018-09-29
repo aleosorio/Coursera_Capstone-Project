@@ -295,9 +295,9 @@ freqthreegrams_news <- ngramsetfreq(ngram = 3, dataset = words_news[1:length(wor
 barplot(names.arg = head(freqthreegrams_news)$word, height = head(freqthreegrams_news)$freq)
 ```
 
-## III. Appendix 3: Preliminary Predictive Model
+## III. Appendix 3: Predictive Model
 
-### III.a. Training Sets
+### III.a. Preliminary Training Sets
 
 #### Primary Set
 
@@ -361,40 +361,35 @@ ngramdim <- function(string) {
 
 The n-grams from which to predict were searched from the previously pre-calculated n-gram sets (based on the training dataset), as follows:
 ```{r}
-ngrampred <- function(string) {
+ngrampred <- function(string, dataset) {
         n <- ngramdim(string)
         stringsearch <- paste("^", string, "\\b", sep="")
-        ngramset <- samplengram %>%
+        ngramset <- dataset %>%
                 filter(., ngram == n & str_detect(word, stringsearch))
         return(ngramset)
 }
 ```
 
-As an example, if applied with the word "to":
+As an example, if applied with the 2-gram "in the":
 ```{r}
-head(ngrampred("to"))
+head(ngrampred(string = "in the", dataset = samplengram), 3)
 ```
 
 #### Function that selects the predicted word, from previous function's output
 
+In case several rows have the same maximum frequency, a random row within that subset was chosen, as follows:
 ```{r}
-wordpred <- function(string) {
-        word <- ngrampred(string) %>%
+wordpred <- function(string, dataset) {
+        word <- ngrampred(string, dataset) %>%
                 filter(., freq == max(freq)) %>%
+                sample_n(., 1) %>%
                 select(., word) %>%
                 word(., -1)
         return(word)
 }
 ```
 
-As an example, if applied with:
-
-1-gram string "to":
+As an example, if applied again with 2-gram string "in the":
 ```{r}
-wordpred("to")
-```
-
-2-gram string "in the":
-```{r}
-wordpred("in the")
+wordpred(string = "in the", dataset = samplengram)
 ```
