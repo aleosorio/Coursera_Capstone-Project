@@ -237,45 +237,29 @@ Applying the Multirow n-grams frequency counter to the first 1,000 rows of the d
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqword_twitter <- ngramsetfreq(ngram = 1, dataset = words_twitter[1:1000])
-barplot(names.arg = head(freqword_twitter)$word, height = head(freqword_twitter)$freq)
+barplot(names.arg = head(freqword_twitter)$string, height = head(freqword_twitter)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqthreegrams_twitter <- ngramsetfreq(ngram = 3, dataset = words_twitter[1:1000])
-barplot(names.arg = head(freqthreegrams_twitter)$word, height = head(freqthreegrams_twitter)$freq)
+barplot(names.arg = head(freqthreegrams_twitter)$string, height = head(freqthreegrams_twitter)$freq)
 ```
 
 #### Blogs dataset
 
-Likewise, the following results were obtained.
-
-1-grams:
-```{r, echo = FALSE, cache = TRUE}
-freqword_blogs <- ngramsetfreq(ngram = 1, dataset = words_blogs[1:1000])
-barplot(names.arg = head(freqword_blogs)$word, height = head(freqword_blogs)$freq)
-```
-
-3-grams:
+Likewise, the following 3-gram results were obtained.
 ```{r, echo = FALSE, cache = TRUE}
 freqthreegrams_blogs <- ngramsetfreq(ngram = 3, dataset = words_blogs[1:1000])
-barplot(names.arg = head(freqthreegrams_blogs)$word, height = head(freqthreegrams_blogs)$freq)
+barplot(names.arg = head(freqthreegrams_blogs)$string, height = head(freqthreegrams_blogs)$freq)
 ```
 
 #### News dataset
 
 Finally, the following results were obtained for the news dataset.
-
-1-grams:
-```{r, echo = FALSE, cache = TRUE}
-freqword_news <- ngramsetfreq(ngram = 1, dataset = words_news[1:1000])
-barplot(names.arg = head(freqword_news)$word, height = head(freqword_news)$freq)
-```
-
-3-grams:
 ```{r, echo = FALSE, cache = TRUE}
 freqthreegrams_news <- ngramsetfreq(ngram = 3, dataset = words_news[1:1000])
-barplot(names.arg = head(freqthreegrams_news)$word, height = head(freqthreegrams_news)$freq)
+barplot(names.arg = head(freqthreegrams_news)$string, height = head(freqthreegrams_news)$freq)
 ```
 
 ## III. Appendix 3: Predictive Model
@@ -324,61 +308,21 @@ samplengram <- bind_rows(sample2gram, sample3gram, sample4gram, sample5gram)
 
 ### III.b. Predictive Functions
 
-#### Function that converts a string into a character vector of lowercase words
+#### Function that, given a string, filters from the sample ngram dataset the n-grams from which to predict the next word
 
-```{r}
-stringtovector <- function(string) {
-        string <- string %>%
-                map_chr(., str_to_lower) %>%
-                str_extract_all(., boundary("word"))
-        return(string[[1]])
-}
-```
-
-#### Function that determines the dimension of the n-gram to predict with
-
-Input: The previous function's output.  If the length of the input is n, the output will be n+1.
-```{r}
-ngramdim <- function(string) {
-        string <- stringtovector(string)
-        n <- length(string) +1
-        return(n)
-}
-```
-
-#### Function that, given a string, determines if there are n-grams available from which to predict the next word
-
-The n-grams from which to predict were searched from the previously pre-calculated n-gram sets (based on the training dataset), as follows:
-```{r}
-ngramdisp <- function(string, dataset) {
-        n <- ngramdim(string)
-        stringsearch <- paste("^", string, "\\b", sep="")
-        disp <- stringsearch %in% dataset[[1]]
-        return(disp)
-}
-```
-
-As an example, if applied with the unexisting 4-gram "and a case of":
-```{r}
-ngramdisp(string = "and a case of", dataset = samplengram)
-```
-
-#### Function that, given a string, selects the n-grams from which to predict the next word
-
-INTEGRAR CON FUNCIÓN ANTERIOR, MÁS UN LOOP (REPEAT O WHILE) QUE CALIBRE N (RESTANDOLE DE A UNA UNIDAD) HASTA QUE SE ENCUENTRE UN N-GRAMA PARA PROPONER:
+In case there is no n-gram available, it reduces n by 1 and repeats until it finds the best available n-gram set.
 ```{r}
 ngrampred <- function(string, dataset) {
-        n <- ngramdim(string)
-        disp <- ngramdisp(string, dataset)
+        numwords <- str_count(string, boundary("word"))
+        disp <- string %in% dataset[[1]]
         while(disp == FALSE) {
-                n <- n-1
-                pred <- word(string, )
-                        
-                
-        } else {
-                ngramset <- dataset %>%
-                        filter(., ngram == n & str_detect(word, stringsearch))
+                numwords <- numwords - 1
+                string <- word(string, 2, -1)
+                disp <- ngramdisp(string, dataset)
         }
+        stringsearch <- paste("^", string, "\\b", sep = "")
+        ngramset <- dataset %>%
+                filter(., ngram == (numwords + 1) & str_detect(string, stringsearch))
         return(ngramset)
 }
 ```
@@ -396,7 +340,7 @@ wordpred <- function(string, dataset) {
         word <- ngrampred(string, dataset) %>%
                 filter(., freq == max(freq)) %>%
                 sample_n(., 1) %>%
-                select(., word) %>%
+                select(., string) %>%
                 word(., -1)
         return(word)
 }
