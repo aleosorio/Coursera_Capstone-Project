@@ -59,7 +59,9 @@ close(con)
 
 Given the warning, the dimensions of both the obtained tibble and the original file, were compared.  The total number of lines obtained with the tibble (77,259) were much less than the ones from the original txt file (1,010,242).  Therefore, some cleaning was required, as follows.
 
-### I.b. Cleaning Data
+### I.b. Cleaning Original Data
+
+#### Cleaning News dataset
 
 Further analysis to the "news" dataset, showed that line 77,259 was cut at the character "1", when compared to the one from the original file ("Ultra Edit" text editor was used for reading the original dataset, as well as the next cleaning steps). Therefore line 77,259 was analysed and an EOF character was found between texts "1" and "gallons", within the phrase "producing 1 -EOF- gallons".  Said character was deleted and the process re-run.  The result was a tibble with 766,277 rows (still less than the original file).  Another EOF character was found in row 766.277 (between texts "in" and "- inch", within the phrase "pears in EOF - inch slices."), deleted and the process re-run. Again, fewer rows were obtained (926,143).  Yet another EOF character was found in row 926,143 (between texts "in" and "-inch" within the phrase "Slice in EOF -inch-thick pieces"), deleted and the process re-run. Still, but last, fewer rows were obtained (948,564).  EOF character was found in row 926,143 (between texts "1" and "pounds" within the phrase "call for 1 EOF pounds of tomatoes"), deleted and the process re-run again.  Finally, 1,010,242 lines were obtained from the final fixed file, as follows:
 
@@ -73,50 +75,48 @@ glimpse(datanews)
 
 With this result, plus the same basic visual comparisons (head, tail, str, is.na) used with the previous datasets, it was concluded that the obtained tibble was also ok to work with and therefore the cleaning stage was considered finished.
 
-### I.c. Preparing Preliminary Datasets
+#### Cleaning foreign languages/ damaged strings
 
-In order to work with reasonably large sets of words, 1,000-long samples of the obtained datasets were converted into lists of underscore-strings, as follows:
-
-```{r, cache = TRUE}
-strings_twitter <- datatwitter %>%
-        sample(., 1000) %>%
-        map_chr(., str_to_lower)
-strings_blogs <- datablogs %>%
-        sample(., 1000) %>%
-        map_chr(., str_to_lower)
-strings_news <- datanews %>%
-        sample(., 1000) %>%
-        map_chr(., str_to_lower)
-```
-
-An example of the underscore_strings obtained:
-```{r, echo = FALSE}
-head(strings_news, 3)
-```
-
-As it can be seen, some rows show words that wouldn't be useful for predictive modeling.  When checking with a language detector, the following results were obtained for the news dataset:
+Some rows show words weren't useful for predictive modeling, such as:
 ```{r}
-table(detect_language(strings_news), useNA = "always")
+datablogs[19]
 ```
 
-In order to keep it simple, only the rows whose language was classified as "en" (for english) were selected from each dataset, as follows:
+Eventhough it's english written, the extra work needed to clean such cases was considered unnecesary.  Instead, a language detector (library "cld3") was used to filter both such cases and rows containing foreign languages.  As an example:
+```{r}
+detect_language(datablogs[20])
+```
+
+Regardless of the result ("fr" stands for french), it was consedered useful for the purpose of eliminating rows containing unclean or foreign text.
+
+Therefore, all three datasets were filtered from rows other than "en", using the following function:
 ```{r, cache = TRUE}
 langfilt <- function(lng, dataset) {
         lngvect <- lng == detect_language(dataset) %>%
                         replace_na(., FALSE)
-        dataset <- dataset[lngvect]
+        dataset <- dataset[lngvect == TRUE]
         return(dataset)
 }
-strings_blogs <- langfilt(lng = "en", dataset = strings_blogs)
-strings_news <- langfilt(lng = "en", dataset = strings_news)
-strings_twitter <- langfilt(lng = "en", dataset = strings_twitter)
 ```
 
-Finally, with each obtained set, an extra set of separate words was created, as follows:
+Cleaning datasets:
 ```{r, cache = TRUE}
-words_twitter <- str_extract_all(strings_twitter, boundary("word"))
-words_blogs <- str_extract_all(strings_blogs, boundary("word"))
-words_news <- str_extract_all(strings_news, boundary("word"))
+strings_blogs <- langfilt(lng = "en", dataset = datablogs)
+strings_news <- langfilt(lng = "en", dataset = datanews)
+strings_twitter <- langfilt(lng = "en", dataset = datatwitter)
+```
+
+Finally, with each obtained set, an extra set of separate underscore-words was created, as follows:
+```{r, cache = TRUE}
+words_twitter <- strings_twitter %>%
+        map_chr(., str_to_lower) %>%
+        str_extract_all(., boundary("word"))
+words_blogs <- strings_blogs %>%
+        map_chr(., str_to_lower) %>%
+        str_extract_all(., boundary("word"))
+words_news <- strings_news %>%
+        map_chr(., str_to_lower) %>%
+        str_extract_all(., boundary("word"))
 ```
 
 An example of the separate-underscore-english-words results obtained:
@@ -124,6 +124,7 @@ An example of the separate-underscore-english-words results obtained:
 ```{r, echo = FALSE}
 head(words_twitter, 3)
 ```
+
 
 ## II. Appendix 2: Preliminary Analysis
 
@@ -135,7 +136,7 @@ Function that returns a data frame of unique n-grams per row.
 
 ```{r}
 ngramrow <- function(ngram, dataset, rownum) {
-        ngrams <- data_frame(ngrams = character())
+        ngrams <- data_frame(string = character())
         if(length(dataset[[rownum]]) < ngram) {
                 ngrams[1,1] <- NA
         } else {
@@ -156,12 +157,12 @@ As an example follows a 1-gram and 3-gram generation, using the 3rd row of the n
 
 1-gram:
 ```{r, echo = FALSE}
-head(ngramrow(ngram = 1, dataset = words_news, rownum = 3), 5)
+head(ngramrow(ngram = 1, dataset = words_news, rownum = 3), 3)
 ```
 
 3-gram:
 ```{r, echo = FALSE}
-head(ngramrow(ngram = 3, dataset = words_news, rownum = 3), 5)
+head(ngramrow(ngram = 3, dataset = words_news, rownum = 3), 3)
 ```
 
 #### Single row n-grams frequency counter
@@ -170,7 +171,7 @@ Function that nested the previous function, within a loop along the length of th
 
 ```{r}
 ngramrowfreq <- function(ngram, dataset, rownum) {
-        rowfreq <- data_frame(word = character(), freq = numeric())
+        rowfreq <- data_frame(string = character(), freq = numeric())
         uniquengramsrow <- ngramrow(ngram, dataset, rownum)
         stringrow <- dataset[[rownum]] %>%
                         paste(., collapse = " ")
@@ -188,12 +189,12 @@ As an example follows an 1-gram and 3-gram row frequency count, using the 3rd ro
 
 1-gram:
 ```{r, echo = FALSE}
-head(ngramrowfreq(ngram = 1, dataset = words_news, rownum= 3), 5)
+head(ngramrowfreq(ngram = 1, dataset = words_news, rownum= 3), 3)
 ```
 
 3-gram:
 ```{r, echo = FALSE}
-head(ngramrowfreq(ngram = 3, dataset = words_news, rownum= 3), 5)
+head(ngramrowfreq(ngram = 3, dataset = words_news, rownum= 3), 3)
 ```
 
 #### Multirow n-grams frequency counter and probability calculator
@@ -202,12 +203,12 @@ Function that nested the previous function, within a loop along the length of th
 
 ```{r}
 ngramsetfreq <- function(ngram, dataset) {
-        setfreq <- data_frame(word = character(), freq = numeric())
+        setfreq <- data_frame(string = character(), freq = numeric())
         for(i in seq_along(dataset)) {
                setfreq <- bind_rows(setfreq, ngramrowfreq(ngram, dataset, rownum = i))
         }
         setfreq <- setfreq %>%
-                group_by(word) %>%
+                group_by(string) %>%
                 summarize (., freq = sum(freq)) %>%
                 arrange(., desc(freq)) %>%
                 mutate(., prob = freq/sum(freq))
@@ -219,35 +220,29 @@ As an example follows an 1-gram and 3-gram frequency count, using the first 5 ro
 
 1-gram:
 ```{r, echo = FALSE}
-head(ngramsetfreq(ngram = 1, dataset = words_news[1:5]), 5)
+head(ngramsetfreq(ngram = 1, dataset = words_news[1:5]), 4)
 ```
 
 3-gram:
 ```{r, echo = FALSE}
-head(ngramsetfreq(ngram = 3, dataset = words_news[1:5]), 5)
+head(ngramsetfreq(ngram = 3, dataset = words_news[1:5]), 4)
 ```
 
 ### II.b. Results Obtained by Dataset
 
 #### Twitter dataset
 
-Applying the Multirow n-grams frequency counter to the first 1,000 rows of the dataset, the following results were obtained for 1, 2 and 3-grams:
+Applying the Multirow n-grams frequency counter to the first 1,000 rows of the dataset, the following results were obtained for 1 and 3-grams:
 
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqword_twitter <- ngramsetfreq(ngram = 1, dataset = words_twitter[1:length(words_twitter)])
+freqword_twitter <- ngramsetfreq(ngram = 1, dataset = words_twitter[1:1000])
 barplot(names.arg = head(freqword_twitter)$word, height = head(freqword_twitter)$freq)
-```
-
-2-grams:
-```{r, echo = FALSE, cache = TRUE}
-freqtwograms_twitter <- ngramsetfreq(ngram = 2, dataset = words_twitter[1:length(words_twitter)])
-barplot(names.arg = head(freqtwograms_twitter)$word, height = head(freqtwograms_twitter)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqthreegrams_twitter <- ngramsetfreq(ngram = 3, dataset = words_twitter[1:length(words_twitter)])
+freqthreegrams_twitter <- ngramsetfreq(ngram = 3, dataset = words_twitter[1:1000])
 barplot(names.arg = head(freqthreegrams_twitter)$word, height = head(freqthreegrams_twitter)$freq)
 ```
 
@@ -257,19 +252,13 @@ Likewise, the following results were obtained.
 
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqword_blogs <- ngramsetfreq(ngram = 1, dataset = words_blogs[1:length(words_blogs)])
+freqword_blogs <- ngramsetfreq(ngram = 1, dataset = words_blogs[1:1000])
 barplot(names.arg = head(freqword_blogs)$word, height = head(freqword_blogs)$freq)
-```
-
-2-grams:
-```{r, echo = FALSE, cache = TRUE}
-freqtwograms_blogs <- ngramsetfreq(ngram = 2, dataset = words_blogs[1:length(words_blogs)])
-barplot(names.arg = head(freqtwograms_blogs)$word, height = head(freqtwograms_blogs)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqthreegrams_blogs <- ngramsetfreq(ngram = 3, dataset = words_blogs[1:length(words_blogs)])
+freqthreegrams_blogs <- ngramsetfreq(ngram = 3, dataset = words_blogs[1:1000])
 barplot(names.arg = head(freqthreegrams_blogs)$word, height = head(freqthreegrams_blogs)$freq)
 ```
 
@@ -279,19 +268,13 @@ Finally, the following results were obtained for the news dataset.
 
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqword_news <- ngramsetfreq(ngram = 1, dataset = words_news[1:length(words_news)])
+freqword_news <- ngramsetfreq(ngram = 1, dataset = words_news[1:1000])
 barplot(names.arg = head(freqword_news)$word, height = head(freqword_news)$freq)
-```
-
-2-grams:
-```{r, echo = FALSE, cache = TRUE}
-freqtwograms_news <- ngramsetfreq(ngram = 2, dataset = words_news[1:length(words_news)])
-barplot(names.arg = head(freqtwograms_news)$word, height = head(freqtwograms_news)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqthreegrams_news <- ngramsetfreq(ngram = 3, dataset = words_news[1:length(words_news)])
+freqthreegrams_news <- ngramsetfreq(ngram = 3, dataset = words_news[1:1000])
 barplot(names.arg = head(freqthreegrams_news)$word, height = head(freqthreegrams_news)$freq)
 ```
 
@@ -301,9 +284,9 @@ barplot(names.arg = head(freqthreegrams_news)$word, height = head(freqthreegrams
 
 #### Primary Set
 
-The training set was built by mixing the three datasets, as follows:
+The training set was built by mixing a sample of each one of the three datasets, as follows:
 ```{r, cache = TRUE}
-sampletrain <- c(words_blogs, words_news, words_twitter)
+sampletrain <- c(sample(words_blogs, 1000), sample(words_news, 1000), sample(words_twitter, 1000))
 ```
 
 #### n-gram Sets
@@ -328,9 +311,15 @@ sample4gram <- ngramsetfreq(ngram = 4, dataset = sampletrain) %>%
         mutate(., ngram = 4)
 ```
 
+5-gram:
+```{r, cache = TRUE}
+sample5gram <- ngramsetfreq(ngram = 5, dataset = sampletrain) %>%
+        mutate(., ngram = 5)
+```
+
 Total n-gram set:
 ```{r, cache = TRUE}
-samplengram <- bind_rows(sample2gram, sample3gram, sample4gram)
+samplengram <- bind_rows(sample2gram, sample3gram, sample4gram, sample5gram)
 ```
 
 ### III.b. Predictive Functions
@@ -357,22 +346,46 @@ ngramdim <- function(string) {
 }
 ```
 
-#### Function that, given a string, selects the n-grams from which to predict the next word
+#### Function that, given a string, determines if there are n-grams available from which to predict the next word
 
 The n-grams from which to predict were searched from the previously pre-calculated n-gram sets (based on the training dataset), as follows:
 ```{r}
-ngrampred <- function(string, dataset) {
+ngramdisp <- function(string, dataset) {
         n <- ngramdim(string)
         stringsearch <- paste("^", string, "\\b", sep="")
-        ngramset <- dataset %>%
-                filter(., ngram == n & str_detect(word, stringsearch))
+        disp <- stringsearch %in% dataset[[1]]
+        return(disp)
+}
+```
+
+As an example, if applied with the unexisting 4-gram "and a case of":
+```{r}
+ngramdisp(string = "and a case of", dataset = samplengram)
+```
+
+#### Function that, given a string, selects the n-grams from which to predict the next word
+
+INTEGRAR CON FUNCIÓN ANTERIOR, MÁS UN LOOP (REPEAT O WHILE) QUE CALIBRE N (RESTANDOLE DE A UNA UNIDAD) HASTA QUE SE ENCUENTRE UN N-GRAMA PARA PROPONER:
+```{r}
+ngrampred <- function(string, dataset) {
+        n <- ngramdim(string)
+        disp <- ngramdisp(string, dataset)
+        while(disp == FALSE) {
+                n <- n-1
+                pred <- word(string, )
+                        
+                
+        } else {
+                ngramset <- dataset %>%
+                        filter(., ngram == n & str_detect(word, stringsearch))
+        }
         return(ngramset)
 }
 ```
 
-As an example, if applied with the 2-gram "in the":
+As an example, if applied with the 2-gram "on the":
 ```{r}
-head(ngrampred(string = "in the", dataset = samplengram), 3)
+head(ngrampred(string = "out of the year", dataset = samplengram), 3)
 ```
 
 #### Function that selects the predicted word, from previous function's output
@@ -389,7 +402,8 @@ wordpred <- function(string, dataset) {
 }
 ```
 
-As an example, if applied again with 2-gram string "in the":
+As an example, if applied again with 2-gram string "on the":
 ```{r}
-wordpred(string = "in the", dataset = samplengram)
+wordpred(string = "on the", dataset = samplengram)
 ```
+
