@@ -122,7 +122,7 @@ words_news <- strings_news %>%
 An example of the separate-underscore-english-words results obtained:
 
 ```{r, echo = FALSE}
-head(words_twitter, 3)
+head(words_twitter, 2)
 ```
 
 
@@ -199,7 +199,7 @@ head(ngramrowfreq(ngram = 3, dataset = words_news, rownum= 3), 3)
 
 #### Multirow n-grams frequency counter and probability calculator
 
-Function that nested the previous function, within a loop along the length of the dataset.  The returned data frame was grouped by n-gram, summarized and arranged by frequency.  Additionally, it calculated the probability or occurence of each n-gram within that dataset.
+Function that nested the previous function, within a loop along the length of the dataset.  The returned data frame was grouped by n-gram, summarized and arranged by frequency.  Additionally, it added a column with the dimension of each n-gram.
 
 ```{r}
 ngramsetfreq <- function(ngram, dataset) {
@@ -211,7 +211,7 @@ ngramsetfreq <- function(ngram, dataset) {
                 group_by(string) %>%
                 summarize (., freq = sum(freq)) %>%
                 arrange(., desc(freq)) %>%
-                mutate(., prob = freq/sum(freq))
+                mutate(., n = ngram)
         return(setfreq)
 }
 ```
@@ -270,47 +270,34 @@ barplot(names.arg = head(freqthreegrams_news)$string, height = head(freqthreegra
 
 The training set was built by mixing a sample of each one of the three datasets, as follows:
 ```{r, cache = TRUE}
-sampletrain <- c(sample(words_blogs, 1000), sample(words_news, 1000), sample(words_twitter, 1000))
+sampletrain <- c(sample(words_blogs, 3000), sample(words_news, 3000), sample(words_twitter, 3000))
 ```
 
 #### n-gram Sets
 
-The following sets were pre-calculated, in order to run the predictive algorithm as an n-gram search machine.  An extra column was added, with the corresponding ngram dimension.  Finally, the sets were bound into one n-gram set (samplengram).
-
-2-gram:
-```{r, cache = TRUE}
-sample2gram <- ngramsetfreq(ngram = 2, dataset = sampletrain) %>%
-        mutate(., ngram = 2)
+Function that generates n-grams (from 2-grams up to the n specified) stats based on the primary set previously obtained. 
+```{r}
+ngramsetgen <- function(n, dataset) {
+        ngramsets <- data_frame(string = character(), freq = integer(), n = integer())
+        for(i in 2:n) {
+                ngramset <- ngramsetfreq(ngram = i, dataset = dataset)
+                ngramsets <- bind_rows(ngramsets, ngramset)
+        }
+        return(ngramsets)
+}
 ```
 
-3-gram:
-```{r, cache = TRUE}
-sample3gram <- ngramsetfreq(ngram = 3, dataset = sampletrain) %>%
-        mutate(., ngram = 3)
-```
+The following set was pre-calculated, in order to run the predictive algorithm as an n-gram search machine.
 
-4-gram:
 ```{r, cache = TRUE}
-sample4gram <- ngramsetfreq(ngram = 4, dataset = sampletrain) %>%
-        mutate(., ngram = 4)
-```
-
-5-gram:
-```{r, cache = TRUE}
-sample5gram <- ngramsetfreq(ngram = 5, dataset = sampletrain) %>%
-        mutate(., ngram = 5)
-```
-
-Total n-gram set:
-```{r, cache = TRUE}
-samplengram <- bind_rows(sample2gram, sample3gram, sample4gram, sample5gram)
+samplengram <- ngramsetgen(5, sampletrain)
 ```
 
 ### III.b. Predictive Functions
 
 #### Function that, given a string, filters from the sample ngram dataset the n-grams from which to predict the next word
 
-In case there is no n-gram available, it reduces n by 1 and repeats until it finds the best available n-gram set.
+In case there is no n-gram available in the dataset, it reduces n by 1 (and the string in 1 word) and repeats until it finds the best available n-gram set.
 ```{r}
 ngrampred <- function(string, dataset) {
         numwords <- str_count(string, boundary("word"))
@@ -318,19 +305,25 @@ ngrampred <- function(string, dataset) {
         while(disp == FALSE) {
                 numwords <- numwords - 1
                 string <- word(string, 2, -1)
-                disp <- ngramdisp(string, dataset)
+                disp <- string %in% dataset[[1]]
         }
         stringsearch <- paste("^", string, "\\b", sep = "")
         ngramset <- dataset %>%
-                filter(., ngram == (numwords + 1) & str_detect(string, stringsearch))
+                filter(., n == (numwords + 1) & str_detect(string, stringsearch))
         return(ngramset)
 }
 ```
 
 As an example, if applied with the 2-gram "on the":
 ```{r}
-head(ngrampred(string = "out of the year", dataset = samplengram), 3)
+head(ngrampred(string = "on the", dataset = samplengram), 3)
 ```
+
+Likewise, if applied with the 4-gram "and a case of":
+```{r}
+head(ngrampred(string = "and a case of", dataset = samplengram), 3)
+```
+It can be seen that, as there were no 5-grams including the string "and a case of <word>", the function then reduced the search string to "a case of" and then searched for a 4-gram that included said string ("a case of <word>"), and so forth until it found the solutions.
 
 #### Function that selects the predicted word, from previous function's output
 
@@ -346,8 +339,8 @@ wordpred <- function(string, dataset) {
 }
 ```
 
-As an example, if applied again with 2-gram string "on the":
+As an example, if applied again with the 4-gram string "and a case of":
 ```{r}
-wordpred(string = "on the", dataset = samplengram)
+wordpred(string = "and a case of", dataset = samplengram)
 ```
 
