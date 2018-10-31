@@ -106,23 +106,31 @@ strings_news <- langfilt(lng = "en", dataset = datanews)
 strings_twitter <- langfilt(lng = "en", dataset = datatwitter)
 ```
 
-Finally, with each obtained set, an extra set of separate underscore-words was created, as follows:
+Finally, with each obtained set, an extra set of separate underscore-words was created, using the following function that converts a vector of character strings into a vector with the strings turned into lower-case and space-separated words
+```{r}
+lowcasewords <- function(dataset) {
+        datalength <- length(dataset)
+        result <- dataset %>%
+                str_to_lower(.) %>%
+                str_extract_all(., boundary("word"))
+        for(i in 1:datalength) {
+                result[[i]] <- str_flatten(result[[i]], collapse = " ")
+        }
+        return(unlist(result))
+}
+```
+
+Applying the function to create the final datasets:
 ```{r, cache = TRUE}
-words_twitter <- strings_twitter %>%
-        map_chr(., str_to_lower) %>%
-        str_extract_all(., boundary("word"))
-words_blogs <- strings_blogs %>%
-        map_chr(., str_to_lower) %>%
-        str_extract_all(., boundary("word"))
-words_news <- strings_news %>%
-        map_chr(., str_to_lower) %>%
-        str_extract_all(., boundary("word"))
+words_twitter <- lowcasewords(strings_twitter)
+words_blogs <- lowcasewords(strings_blogs)
+words_news <- lowcasewords(strings_news)
 ```
 
 An example of the separate-underscore-english-words results obtained:
 
 ```{r, echo = FALSE}
-head(words_twitter, 2)
+head(words_news, 3)
 ```
 
 
@@ -132,68 +140,52 @@ head(words_twitter, 2)
 
 #### Single row n-grams generator
 
-Function that returns a data frame of unique n-grams per row.
+Function that inputs a vector of character strings and, with one specific character string, returns another character vector with all of its possible n-grams.
 
 ```{r}
 ngramrow <- function(ngram, dataset, rownum) {
-        ngrams <- data_frame(string = character())
-        if(length(dataset[[rownum]]) < ngram) {
-                ngrams[1,1] <- NA
+        ngrams <- character(length = 0)
+        lengthstring <- str_count(dataset[rownum], boundary("word"))
+        if(lengthstring < ngram) {
+                ngrams <- NA
         } else {
-                qngrams <- length(dataset[[rownum]])+1-ngram
+                qngrams <- lengthstring+1-ngram
                 for(j in 1:qngrams) {
-                        ngramjwords <- c()
-                        for(k in j:(j+ngram-1)) {
-                                ngramjwords <- c(ngramjwords, dataset[[rownum]][[k]])
-                        }
-                        ngrams[j,1] <- str_flatten(ngramjwords, collapse = " ")
+                                ngrams <- c(ngrams, word(dataset[rownum], j, ngram + j - 1))
+                                }
                 }
-        }
         return(unique(ngrams))
-}
+        }
 ```
 
-As an example follows a 1-gram and 3-gram generation, using the 3rd row of the news data:
-
-1-gram:
-```{r, echo = FALSE}
-head(ngramrow(ngram = 1, dataset = words_news, rownum = 3), 3)
-```
+As an example follows a 3-gram generation, using the 3rd row of the news data:
 
 3-gram:
 ```{r, echo = FALSE}
-head(ngramrow(ngram = 3, dataset = words_news, rownum = 3), 3)
+head(ngramrow(ngram = 3, dataset = words_news, rownum = 3), 5)
 ```
 
 #### Single row n-grams frequency counter
 
-Function that nested the previous function, within a loop along the length of the selected row.  The returned data frame was grouped by the corresponding n-grams, summarized and arranged by frequency in order to easily visualize the most frequent ones in the given row.
-
+Function that nested the previous function, within a loop along the length of the selected vector's string.  The returned data frame was grouped by the corresponding n-grams, summarized and arranged by frequency in order to easily visualize the most frequent ones in the given row.
 ```{r}
 ngramrowfreq <- function(ngram, dataset, rownum) {
-        rowfreq <- data_frame(string = character(), freq = numeric())
+        stringrow <- dataset[rownum]
         uniquengramsrow <- ngramrow(ngram, dataset, rownum)
-        stringrow <- dataset[[rownum]] %>%
-                        paste(., collapse = " ")
-        for(i in seq_along(uniquengramsrow[[1]])) {
-                uniquengram <- paste("\\b", uniquengramsrow[i,1], "\\b", sep = "")
+        numngrams <- length(uniquengramsrow)
+        rowfreq <- data_frame(string = character(), freq = numeric())
+        for(i in 1:numngrams) {
+                uniquengram <- paste("\\b", uniquengramsrow[i], "\\b", sep = "")
                 uniquengramfreq <- str_count(stringrow, uniquengram)
-                rowfreq[i,1] <- uniquengramsrow[i,1]
+                rowfreq[i,1] <- uniquengramsrow[i]
                 rowfreq[i,2] <- uniquengramfreq
         }
         return(rowfreq)
 }
 ```
 
-As an example follows an 1-gram and 3-gram row frequency count, using the 3rd row of the news data:
-
-1-gram:
-```{r, echo = FALSE}
-head(ngramrowfreq(ngram = 1, dataset = words_news, rownum= 3), 3)
-```
-
-3-gram:
-```{r, echo = FALSE}
+As an example follows a 3-gram row frequency count, using the 3rd row of the news data:
+```{r, cache = TRUE, echo = FALSE}
 head(ngramrowfreq(ngram = 3, dataset = words_news, rownum= 3), 3)
 ```
 
@@ -204,7 +196,7 @@ Function that nested the previous function, within a loop along the length of th
 ```{r}
 ngramsetfreq <- function(ngram, dataset) {
         setfreq <- data_frame(string = character(), freq = numeric())
-        for(i in seq_along(dataset)) {
+        for(i in 1:length(dataset)) {
                setfreq <- bind_rows(setfreq, ngramrowfreq(ngram, dataset, rownum = i))
         }
         setfreq <- setfreq %>%
@@ -216,15 +208,8 @@ ngramsetfreq <- function(ngram, dataset) {
 }
 ```
 
-As an example follows an 1-gram and 3-gram frequency count, using the first 5 rows of the news dataset:
-
-1-gram:
-```{r, echo = FALSE}
-head(ngramsetfreq(ngram = 1, dataset = words_news[1:5]), 4)
-```
-
-3-gram:
-```{r, echo = FALSE}
+As an example follows a 3-gram frequency count, using the first 5 rows of the news dataset:
+```{r, cache = TRUE, echo = FALSE}
 head(ngramsetfreq(ngram = 3, dataset = words_news[1:5]), 4)
 ```
 
@@ -262,7 +247,7 @@ freqthreegrams_news <- ngramsetfreq(ngram = 3, dataset = words_news[1:1000])
 barplot(names.arg = head(freqthreegrams_news)$string, height = head(freqthreegrams_news)$freq)
 ```
 
-## III. Appendix 3: Predictive Model
+## III. Appendix 3: Predictive Models
 
 ### III.a. Preliminary Training Sets
 
@@ -270,12 +255,12 @@ barplot(names.arg = head(freqthreegrams_news)$string, height = head(freqthreegra
 
 The training set was built by mixing a sample of each one of the three datasets, as follows:
 ```{r, cache = TRUE}
-sampletrain <- c(sample(words_blogs, 3000), sample(words_news, 3000), sample(words_twitter, 3000))
+sampletrain <- c(sample(words_blogs, 1000), sample(words_news, 1000), sample(words_twitter, 1000))
 ```
 
 #### n-gram Sets
 
-Function that generates n-grams (from 2-grams up to the n specified) stats based on the primary set previously obtained. 
+Function that generates n-grams (from 2-grams up to the n specified) based on the Primary Set (previously obtained). 
 ```{r}
 ngramsetgen <- function(n, dataset) {
         ngramsets <- data_frame(string = character(), freq = integer(), n = integer())
@@ -293,11 +278,11 @@ The following set was pre-calculated, in order to run the predictive algorithm a
 samplengram <- ngramsetgen(5, sampletrain)
 ```
 
-### III.b. Predictive Functions
+### III.b. Predictive Algorithms Based on Searching Pre-calculated n-grams
 
 #### Function that, given a string, filters from the sample ngram dataset the n-grams from which to predict the next word
 
-In case there is no n-gram available in the dataset, it reduces n by 1 (and the string in 1 word) and repeats until it finds the best available n-gram set.
+In case there is no n-gram available in the samplengram dataset, it reduces n by 1 (and the string in 1 word) and repeats until it finds the best available n-gram set.
 ```{r}
 ngrampred <- function(string, dataset) {
         numwords <- str_count(string, boundary("word"))
@@ -342,5 +327,74 @@ wordpred <- function(string, dataset) {
 As an example, if applied again with the 4-gram string "and a case of":
 ```{r}
 wordpred(string = "and a case of", dataset = samplengram)
+```
+
+The problem with the "search engine" approach, is that it requires enormous amount of processing in order to generate all n-gram Sets from which to predict later.  Therefore a different approach was attempted further on, consisting on generating the n-gram sets based on the string that requires prediction, as follows in the next chapter.
+
+### III.c. Predictive Algorithms Based on Searching the String with which to calculate the required n-grams
+
+#### Function that extracts specified string, plus its next word, from a row
+```{r}
+stringrow <- function(string, dataset, numrow) {
+        matches <- str_extract_all(dataset[numrow], paste("(^|\\s)", string, "\\s\\w+", sep = ""))[[1]]
+        return(matches)
+}
+```
+
+As an example, if applied with the string "plans" to the 3rd row of the news dataset:
+```{r}
+stringrow("plans", words_news, numrow = 3)
+```
+
+#### Function that nests previous function and applies it to a dataset
+```{r}
+stringset <- function(string, dataset) {
+        datlength <- length(dataset)
+        matches <- c()
+        for(i in 1:datlength) {
+                stringmatch <- stringrow(string, dataset, numrow = i)
+                matches <- c(matches, stringmatch)
+        }
+        matches <- data_frame(string = matches) %>%
+                mutate(., freq = 1) %>%
+                group_by(string) %>%
+                summarize (., freq = sum(freq)) %>%
+                arrange(., desc(freq))
+        return(matches)
+}
+```
+
+As an example, if applied with the string "to the" to the first 1.000 news dataset:
+```{r}
+head(stringset("to the", words_news[1:1000]), 5)
+```
+
+The performance obtained with the later functions, was extremly better than the previous one.  Much so that the whole news dataset took less than 40 seconds to complete.
+
+#### Wrapper that applies stringset function only to strings available in the input set
+
+In case there is no string available in the dataset, it reduces the string's n-gram by 1 and repeats until it finds the first available string.
+```{r}
+stringsure <- function(string, dataset) {
+        strlength <- str_count(string, boundary("word"))
+        strdisp <- paste("(^|\\s)", string, "\\s\\w+", sep = "") %>%
+                str_detect(dataset, .) %>%
+                sum()
+        while(strdisp == 0) {
+                strlength <- strlength - 1
+                string <- word(string, 2, -1)
+                strdisp <- paste("(^|\\s)", string, "\\s\\w+", sep = "") %>%
+                        str_detect(dataset, .) %>%
+                        sum()
+        }
+        strwhere <- str_which(dataset, paste("(^|\\s)", string, "\\s\\w+", sep = ""))
+        result <- stringset(string, dataset[strwhere])
+        return(result)
+}
+```
+
+As an example, if applied with the string "the faith during the" on the news dataset:
+```{r}
+head(stringsure(string = "the faith during the", dataset = words_news), 5)
 ```
 
