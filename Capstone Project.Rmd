@@ -373,22 +373,20 @@ The performance obtained with the later functions, was extremly better than the 
 
 #### Wrapper that applies stringset function only to strings available in the input set
 
-In case there is no string available in the dataset, it reduces the string's n-gram by 1 and repeats until it finds the first available string.
+It starts by converting the input string to lower_case.  In case there's no match for the string in the dataset, it reduces the string's n-gram by 1 (by taking out its first word) and repeats until it finds the first available string.
 ```{r}
 stringsure <- function(string, dataset) {
-        strlength <- str_count(string, boundary("word"))
-        strdisp <- paste("(^|\\s)", string, "\\s\\w+", sep = "") %>%
-                str_detect(dataset, .) %>%
-                sum()
+        strsearch <- str_to_lower(string)
+        strwhere <- paste("(^|\\s)", strsearch, "\\s\\w+", sep = "") %>%
+                str_which(dataset, .)
+        strdisp <- sum(strwhere)
         while(strdisp == 0) {
-                strlength <- strlength - 1
-                string <- word(string, 2, -1)
-                strdisp <- paste("(^|\\s)", string, "\\s\\w+", sep = "") %>%
-                        str_detect(dataset, .) %>%
-                        sum()
+                strsearch <- word(strsearch, 2, -1)
+                strwhere <- paste("(^|\\s)", strsearch, "\\s\\w+", sep = "") %>%
+                        str_which(dataset, .)
+                strdisp <- sum(strwhere)
         }
-        strwhere <- str_which(dataset, paste("(^|\\s)", string, "\\s\\w+", sep = ""))
-        result <- stringset(string, dataset[strwhere])
+        result <- stringset(strsearch, dataset[strwhere])
         return(result)
 }
 ```
@@ -397,4 +395,8 @@ As an example, if applied with the string "the faith during the" on the news dat
 ```{r}
 head(stringsure(string = "the faith during the", dataset = words_news), 5)
 ```
+
+RESOLVER REGULAR EXPRESSION AL INICIO DE LA PALABRA BUSCADA (CON V/S SIN ESPACIO EN BLANCO => UNA SOLA SOLUCION).
+VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMAS A BUSCAR (A MAYOR N, MAYOR ESPACIO MUESTRAL)
+
 
