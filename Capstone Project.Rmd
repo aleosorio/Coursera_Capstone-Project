@@ -122,22 +122,19 @@ Therefore, all three datasets were filtered from rows other than "en", using the
 ```{r, cache = TRUE}
 langfilt <- function(lng, dataset) {
         lngdetectvect <- detect_language(dataset)
-        print(head(lngdetectvect))
         lngvect <- lng == lngdetectvect %>%
                         replace_na(., FALSE)
-        print(head(lngvect))
         dataset <- dataset[lngvect == TRUE]
         return(dataset)
 }
 ```
 
-Cleaning datasets:
+Final datasets:
 ```{r, cache = TRUE}
-final_blogs <- langfilt(lng = "en", dataset = datablogs)
-##strings_news <- langfilt(lng = "en", dataset = datanews)
-##strings_twitter <- langfilt(lng = "en", dataset = datatwitter)
+final_blogs <- langfilt(lng = "en", dataset = words_blogs)
+final_news <- langfilt(lng = "en", dataset = words_news)
+final_twitter <- langfilt(lng = "en", dataset = words_twitter)
 ```
-
 
 ## II. Appendix 2: Preliminary Analysis
 
