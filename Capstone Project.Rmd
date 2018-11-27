@@ -336,7 +336,7 @@ The problem with the "search engine" approach, is that it requires enormous amou
 #### Function that extracts specified string, plus its next word, from a row
 ```{r}
 stringrow <- function(string, dataset, numrow) {
-        matches <- str_extract_all(dataset[numrow], paste("(^|\\s)", string, "\\s\\w+", sep = ""))[[1]]
+        matches <- str_extract_all(dataset[numrow], paste("(?<=(^|\\s))", string, "\\s\\w+", sep = ""))[[1]]
         return(matches)
 }
 ```
@@ -377,16 +377,16 @@ It starts by converting the input string to lower_case.  In case there's no matc
 ```{r}
 stringsure <- function(string, dataset) {
         strsearch <- str_to_lower(string)
-        strwhere <- paste("(^|\\s)", strsearch, "\\s\\w+", sep = "") %>%
+        strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                 str_which(dataset, .)
         strdisp <- sum(strwhere)
         while(strdisp == 0) {
                 strsearch <- word(strsearch, 2, -1)
-                strwhere <- paste("(^|\\s)", strsearch, "\\s\\w+", sep = "") %>%
+                strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                         str_which(dataset, .)
                 strdisp <- sum(strwhere)
         }
-        result <- stringset(strsearch, dataset[strwhere])
+        result <- stringset(strsearch , dataset[strwhere])
         return(result)
 }
 ```
@@ -396,7 +396,6 @@ As an example, if applied with the string "the faith during the" on the news dat
 head(stringsure(string = "the faith during the", dataset = words_news), 5)
 ```
 
-RESOLVER REGULAR EXPRESSION AL INICIO DE LA PALABRA BUSCADA (CON V/S SIN ESPACIO EN BLANCO => UNA SOLA SOLUCION).
-VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMAS A BUSCAR (A MAYOR N, MAYOR ESPACIO MUESTRAL)
-
-
+PENDIENTES:
+1 VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMAS A BUSCAR (A MAYOR N, MAYOR ESPACIO MUESTRAL).  O FIJAR UN N MÁXIMO, TRAS EL CUAL REBAJE STRING A DICHO N.
+2 CONSTRUIR WRAPPER QUE ARROJE PREDICCIÓN DE SIGUIENTE PALABRA (DE ALGORITMOS ANTERIORES)
