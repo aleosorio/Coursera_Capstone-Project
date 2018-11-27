@@ -75,38 +75,9 @@ glimpse(datanews)
 
 With this result, plus the same basic visual comparisons (head, tail, str, is.na) used with the previous datasets, it was concluded that the obtained tibble was also ok to work with and therefore the cleaning stage was considered finished.
 
-#### Cleaning foreign languages/ damaged strings
+#### Converting texts to separate lower-case and space-separated words
 
-Some rows show words weren't useful for predictive modeling, such as:
-```{r}
-datablogs[19]
-```
-
-Eventhough it's english written, the extra work needed to clean such cases was considered unnecesary.  Instead, a language detector (library "cld3") was used to filter both such cases and rows containing foreign languages.  As an example:
-```{r}
-detect_language(datablogs[20])
-```
-
-Regardless of the result ("fr" stands for french), it was consedered useful for the purpose of eliminating rows containing unclean or foreign text.
-
-Therefore, all three datasets were filtered from rows other than "en", using the following function:
-```{r, cache = TRUE}
-langfilt <- function(lng, dataset) {
-        lngvect <- lng == detect_language(dataset) %>%
-                        replace_na(., FALSE)
-        dataset <- dataset[lngvect == TRUE]
-        return(dataset)
-}
-```
-
-Cleaning datasets:
-```{r, cache = TRUE}
-strings_blogs <- langfilt(lng = "en", dataset = datablogs)
-strings_news <- langfilt(lng = "en", dataset = datanews)
-strings_twitter <- langfilt(lng = "en", dataset = datatwitter)
-```
-
-Finally, with each obtained set, an extra set of separate underscore-words was created, using the following function that converts a vector of character strings into a vector with the strings turned into lower-case and space-separated words
+With each obtained set, an extra set was created, using the following function that converts a vector of character strings into a vector with the strings turned into lower-case and space-separated words:
 ```{r}
 lowcasewords <- function(dataset) {
         datalength <- length(dataset)
@@ -122,15 +93,49 @@ lowcasewords <- function(dataset) {
 
 Applying the function to create the final datasets:
 ```{r, cache = TRUE}
-words_twitter <- lowcasewords(strings_twitter)
-words_blogs <- lowcasewords(strings_blogs)
-words_news <- lowcasewords(strings_news)
+words_twitter <- lowcasewords(datatwitter)
+words_blogs <- lowcasewords(datablogs)
+words_news <- lowcasewords(datanews)
 ```
 
-An example of the separate-underscore-english-words results obtained:
+An example of the separate-underscore-words results obtained:
 
 ```{r, echo = FALSE}
 head(words_news, 3)
+```
+
+#### Cleaning foreign languages/ damaged strings
+
+Some rows show words weren't useful for predictive modeling, such as:
+```{r}
+words_blogs[20]
+```
+
+Eventhough it's english written, the extra work needed to clean such cases was considered unnecesary.  Instead, a language detector (library "cld3") was used to filter both such cases and rows containing foreign languages.  As an example:
+```{r}
+detect_language(words_blogs[20])
+```
+
+Regardless of the result ("fr" stands for french), it was consedered useful for the purpose of eliminating rows containing unclean or foreign text.
+
+Therefore, all three datasets were filtered from rows other than "en", using the following function:
+```{r, cache = TRUE}
+langfilt <- function(lng, dataset) {
+        lngdetectvect <- detect_language(dataset)
+        print(head(lngdetectvect))
+        lngvect <- lng == lngdetectvect %>%
+                        replace_na(., FALSE)
+        print(head(lngvect))
+        dataset <- dataset[lngvect == TRUE]
+        return(dataset)
+}
+```
+
+Cleaning datasets:
+```{r, cache = TRUE}
+final_blogs <- langfilt(lng = "en", dataset = datablogs)
+##strings_news <- langfilt(lng = "en", dataset = datanews)
+##strings_twitter <- langfilt(lng = "en", dataset = datatwitter)
 ```
 
 
