@@ -164,7 +164,7 @@ As an example follows a 3-gram generation, using the 3rd row of the news data:
 
 3-gram:
 ```{r, echo = FALSE}
-head(ngramrow(ngram = 3, dataset = words_news, rownum = 3), 5)
+head(ngramrow(ngram = 3, dataset = final_news, rownum = 3), 5)
 ```
 
 #### Single row n-grams frequency counter
@@ -188,7 +188,7 @@ ngramrowfreq <- function(ngram, dataset, rownum) {
 
 As an example follows a 3-gram row frequency count, using the 3rd row of the news data:
 ```{r, cache = TRUE, echo = FALSE}
-head(ngramrowfreq(ngram = 3, dataset = words_news, rownum= 3), 3)
+head(ngramrowfreq(ngram = 3, dataset = final_news, rownum= 3), 3)
 ```
 
 #### Multirow n-grams frequency counter and probability calculator
@@ -212,7 +212,7 @@ ngramsetfreq <- function(ngram, dataset) {
 
 As an example follows a 3-gram frequency count, using the first 5 rows of the news dataset:
 ```{r, cache = TRUE, echo = FALSE}
-head(ngramsetfreq(ngram = 3, dataset = words_news[1:5]), 4)
+head(ngramsetfreq(ngram = 3, dataset = final_news[1:5]), 4)
 ```
 
 ### II.b. Results Obtained by Dataset
@@ -223,30 +223,30 @@ Applying the Multirow n-grams frequency counter to the first 1,000 rows of the d
 
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqword_twitter <- ngramsetfreq(ngram = 1, dataset = words_twitter[1:1000])
-barplot(names.arg = head(freqword_twitter)$string, height = head(freqword_twitter)$freq)
+freq_twitter <- ngramsetfreq(ngram = 1, dataset = final_twitter[1:1000])
+barplot(names.arg = head(freq_twitter)$string, height = head(freq_twitter)$freq)
 ```
 
 3-grams:
 ```{r, echo = FALSE, cache = TRUE}
-freqthreegrams_twitter <- ngramsetfreq(ngram = 3, dataset = words_twitter[1:1000])
-barplot(names.arg = head(freqthreegrams_twitter)$string, height = head(freqthreegrams_twitter)$freq)
+freq_twitter <- ngramsetfreq(ngram = 3, dataset = final_twitter[1:1000])
+barplot(names.arg = head(freq_twitter)$string, height = head(freq_twitter)$freq)
 ```
 
 #### Blogs dataset
 
 Likewise, the following 3-gram results were obtained.
 ```{r, echo = FALSE, cache = TRUE}
-freqthreegrams_blogs <- ngramsetfreq(ngram = 3, dataset = words_blogs[1:1000])
-barplot(names.arg = head(freqthreegrams_blogs)$string, height = head(freqthreegrams_blogs)$freq)
+freq_blogs <- ngramsetfreq(ngram = 3, dataset = final_blogs[1:1000])
+barplot(names.arg = head(freq_blogs)$string, height = head(freq_blogs)$freq)
 ```
 
 #### News dataset
 
 Finally, the following results were obtained for the news dataset.
 ```{r, echo = FALSE, cache = TRUE}
-freqthreegrams_news <- ngramsetfreq(ngram = 3, dataset = words_news[1:1000])
-barplot(names.arg = head(freqthreegrams_news)$string, height = head(freqthreegrams_news)$freq)
+freq_news <- ngramsetfreq(ngram = 3, dataset = final_news[1:1000])
+barplot(names.arg = head(freq_news)$string, height = head(freq_news)$freq)
 ```
 
 ## III. Appendix 3: Predictive Models
@@ -257,7 +257,7 @@ barplot(names.arg = head(freqthreegrams_news)$string, height = head(freqthreegra
 
 The training set was built by mixing a sample of each one of the three datasets, as follows:
 ```{r, cache = TRUE}
-sampletrain <- c(sample(words_blogs, 1000), sample(words_news, 1000), sample(words_twitter, 1000))
+sampletrain <- c(sample(final_blogs, 1000), sample(final_news, 1000), sample(final_twitter, 1000))
 ```
 
 #### n-gram Sets
@@ -345,7 +345,7 @@ stringrow <- function(string, dataset, numrow) {
 
 As an example, if applied with the string "plans" to the 3rd row of the news dataset:
 ```{r}
-stringrow("plans", words_news, numrow = 3)
+stringrow("plans", final_news, numrow = 3)
 ```
 
 #### Function that nests previous function and applies it to a dataset
@@ -368,7 +368,7 @@ stringset <- function(string, dataset) {
 
 As an example, if applied with the string "to the" to the first 1.000 news dataset:
 ```{r}
-head(stringset("to the", words_news[1:1000]), 5)
+head(stringset("to the", final_news[1:1000]), 5)
 ```
 
 The performance obtained with the later functions, was extremly better than the previous one.  Much so that the whole news dataset took less than 40 seconds to complete.
@@ -395,7 +395,7 @@ stringsure <- function(string, dataset) {
 
 As an example, if applied with the string "the faith during the" on the news dataset:
 ```{r}
-head(stringsure(string = "the faith during the", dataset = words_news), 5)
+head(stringsure(string = "the faith during the", dataset = final_news), 5)
 ```
 
 PENDIENTES:
