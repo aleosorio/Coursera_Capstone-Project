@@ -391,20 +391,24 @@ The performance obtained with the later functions, was extremly better than the 
 
 #### Wrapper that applies stringset function only to strings available in the input set
 
-It starts by converting the input string to lower_case.  In case there's no match for the string in the dataset, it reduces the string's n-gram by 1 (by taking out its first word) and repeats until it finds the first available string.
+It starts by converting the input string to lower_case.  In case there's no match for the string in the dataset, it reduces the string's n-gram by 1 (by taking out its first word) and repeats until it finds the first available string. If it goes down to a 1-gram string and finds no result, it returns an empty dataframe (with the same format of a non-empty output).
 ```{r}
 stringsure <- function(string, dataset) {
         strsearch <- str_to_lower(string)
         strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                 str_which(dataset, .)
         strdisp <- length(strwhere)
-        while(strdisp == 0) {
+        while(strdisp == 0 & str_count(strsearch, boundary("word")) > 1) {
                 strsearch <- word(strsearch, 2, -1)
                 strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                         str_which(dataset, .)
-                strdisp <- sum(strwhere)
+                strdisp <- length(strwhere)
         }
-        result <- stringset(strsearch , dataset[strwhere])
+        if(length(strwhere) > 0) {
+                result <- stringset(strsearch , dataset[strwhere])
+        } else {
+                result <- data_frame(string = character(), freq = numeric())
+        }
         return(result)
 }
 ```
@@ -419,19 +423,28 @@ head(stringsure(string = "the faith during the", dataset = testdata), 5)
 Same previous function, wordpred, was modified in order to work with the current stringsure function, as follows:
 ```{r}
 wordpred2 <- function(string, dataset) {
-        word <- stringsure(string, dataset) %>%
-                filter(., freq == max(freq)) %>%
-                sample_n(., 1) %>%
-                select(., string) %>%
-                word(., -1)
-        return(word)
+        pred <- stringsure(string, dataset)
+        if(nrow(pred) >0) {
+                pred <- filter(pred, freq == max(freq)) %>%
+                        sample_n(., 1) %>%
+                        select(., string) %>%
+                        word(., -1)
+        } else {
+                pred <- "NOT ENOUGH DATA AVAILABLE TO PREDICT. TRY AGAIN WITH A DIFFERENT STRING"
+        }
+        return(pred)
 }
 ```
 
-As an example, if applied again with the 4-gram string "and a case of":
+As an example, if applied again with the 4-gram string "the faith during the":
 ```{r}
 wordpred2(string = "the faith during the", dataset = testdata)
 ```
 
 
-PENDIENTE: VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR (A MAYOR N, MAYOR ESPACIO MUESTRAL).  O FIJAR UN N MÁXIMO, TRAS EL CUAL REBAJE STRING A DICHO N.
+PENDIENTE:
+1. PROBAR TRUNCANDO TEXTOS CUANDO APARECE UN "."
+2. VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR:
+  A) 1-GRAMS: SEGMENTAR EN PALABRAS MÁS POPULARES (MENOR ESPACIO MUESTRAL -0.001-) Y MENOS POPULARES (EJ: 0.05)
+  B) 2-GRAMS (EJ: 0.1)
+  C) 3-GRAMS (EJ:0.2)
