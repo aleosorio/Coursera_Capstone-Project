@@ -11,6 +11,7 @@ library(tidyverse)
 library(stringr)
 library(cld3)
 library(caret)
+library(microbenchmark)
 set.seed(123)
 ```
 
@@ -396,7 +397,7 @@ stringsure <- function(string, dataset) {
         strsearch <- str_to_lower(string)
         strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                 str_which(dataset, .)
-        strdisp <- sum(strwhere)
+        strdisp <- length(strwhere)
         while(strdisp == 0) {
                 strsearch <- word(strsearch, 2, -1)
                 strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
