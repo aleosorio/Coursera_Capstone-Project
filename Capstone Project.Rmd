@@ -251,9 +251,9 @@ barplot(names.arg = head(freq_news)$string, height = head(freq_news)$freq)
 
 ## III. Appendix 3: Predictive Models
 
-### III.a. Preliminary Training Sets
+### III.a. Predictive Algorithms Based on Searching Pre-calculated n-grams
 
-#### Primary Set
+#### Preliminary Data Set
 
 The training set was built by mixing a sample of each one of the three datasets, as follows:
 ```{r, cache = TRUE}
@@ -279,8 +279,6 @@ The following set was pre-calculated, in order to run the predictive algorithm a
 ```{r, cache = TRUE}
 samplengram <- ngramsetgen(5, sampletrain)
 ```
-
-### III.b. Predictive Algorithms Based on Searching Pre-calculated n-grams
 
 #### Function that, given a string, filters from the sample ngram dataset the n-grams from which to predict the next word
 
@@ -335,6 +333,23 @@ The problem with the "search engine" approach, is that it requires enormous amou
 
 ### III.c. Predictive Algorithms Based on Searching the String with which to calculate the required n-grams
 
+#### Function that generates dataset to work with
+```{r}
+datagen <- function(percent, dataset1, dataset2, dataset3) {
+        dim1 <- ceiling(length(dataset1) * percent)
+        dim2 <- ceiling(length(dataset2) * percent)
+        dim3 <- ceiling(length(dataset3) * percent)
+        datafinal <- c(sample(dataset1, dim1), sample(dataset2, dim2), sample(dataset3, dim3))
+        return(datafinal)
+}
+```
+
+The testing dataset was built with 40% of each available dataset (blogs, news and twitter), as follows:
+```{r, cache = TRUE}
+testdata <- datagen(.4, final_blogs, final_news, final_twitter)
+```
+
+
 #### Function that extracts specified string, plus its next word, from a row
 ```{r}
 stringrow <- function(string, dataset, numrow) {
@@ -366,9 +381,9 @@ stringset <- function(string, dataset) {
 }
 ```
 
-As an example, if applied with the string "to the" to the first 1.000 news dataset:
+As an example, if applied with the string "to the" to a small sample of the testing dataset:
 ```{r}
-head(stringset("to the", final_news[1:1000]), 5)
+head(stringset("to the", sample(testdata, 1000)), 5)
 ```
 
 The performance obtained with the later functions, was extremly better than the previous one.  Much so that the whole news dataset took less than 40 seconds to complete.
@@ -393,11 +408,29 @@ stringsure <- function(string, dataset) {
 }
 ```
 
-As an example, if applied with the string "the faith during the" on the news dataset:
+As an example, if applied with the string "the faith during the" on the testing dataset:
 ```{r}
-head(stringsure(string = "the faith during the", dataset = final_news), 5)
+head(stringsure(string = "the faith during the", dataset = testdata), 5)
 ```
 
-PENDIENTES:
-1 VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR (A MAYOR N, MAYOR ESPACIO MUESTRAL).  O FIJAR UN N MÁXIMO, TRAS EL CUAL REBAJE STRING A DICHO N.
-2 CONSTRUIR WRAPPER QUE ARROJE PREDICCIÓN DE SIGUIENTE PALABRA (DE ALGORITMOS ANTERIORES)
+#### Function that selects the predicted word, from previous function's output
+
+Same previous function, wordpred, was modified in order to work with the current stringsure function, as follows:
+```{r}
+wordpred2 <- function(string, dataset) {
+        word <- stringsure(string, dataset) %>%
+                filter(., freq == max(freq)) %>%
+                sample_n(., 1) %>%
+                select(., string) %>%
+                word(., -1)
+        return(word)
+}
+```
+
+As an example, if applied again with the 4-gram string "and a case of":
+```{r}
+wordpred2(string = "the faith during the", dataset = testdata)
+```
+
+
+PENDIENTE: VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR (A MAYOR N, MAYOR ESPACIO MUESTRAL).  O FIJAR UN N MÁXIMO, TRAS EL CUAL REBAJE STRING A DICHO N.
