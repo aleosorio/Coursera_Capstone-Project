@@ -74,21 +74,32 @@ rm(con)
 glimpse(datanews)
 ```
 
-With this result, plus the same basic visual comparisons (head, tail, str, is.na) used with the previous datasets, it was concluded that the obtained tibble was also ok to work with and therefore the cleaning stage was considered finished.
+With this result, plus the same basic visual comparisons (head, tail, str, is.na) used with the previous datasets, it was concluded that the obtained vector was also ok to work with and therefore the cleaning stage was considered finished.
 
-#### Converting texts to separate lower-case and space-separated words
+#### Splitting texts into pargraphs made up of lower-case-space-separated words 
 
-With each obtained set, an extra set was created, using the following function that converts a vector of character strings into a vector with the strings turned into lower-case and space-separated words:
+The following function splits each vector element (a string) into pargraphs with which it creates extra vector elements.  It also filters all "" elements.
+```{r}
+splitsentences <- function(dataset) {
+        result <- str_split(dataset, "(?<!(mr|mrs|sr|Mr|Mrs|Sr|MR|MRS|SR))\\.|\\?|\\!|\\:") %>%
+                unlist(.) %>%
+                subset(., . != "")
+        return(result)
+}
+```
+
+The following function nests the previous one, converting its output into a vector with the strings turned into lower-case and space-separated words:
 ```{r}
 lowcasewords <- function(dataset) {
-        datalength <- length(dataset)
-        result <- dataset %>%
+        result <- splitsentences(dataset)
+        datalength <- length(result)
+        result <- result %>%
                 str_to_lower(.) %>%
                 str_extract_all(., boundary("word"))
         for(i in 1:datalength) {
                 result[[i]] <- str_flatten(result[[i]], collapse = " ")
         }
-        return(unlist(result))
+        return(unlist(result, use.names = FALSE))
 }
 ```
 
@@ -443,8 +454,8 @@ wordpred2(string = "the faith during the", dataset = testdata)
 
 
 PENDIENTE:
-1. PROBAR TRUNCANDO TEXTOS CUANDO APARECE UN "."
-2. VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR:
+1. PROBAR TRUNCANDO TEXTOS CUANDO APARECE ALGUN ". : ? !" (OMITIR MR. MRS. SR.).
+2. VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR: BUSCAR MNEMOTECNICA PARA DEFINIR N A PARTIR DEL % DE CADA SEGMENTO N-GRAM (PARETO 80/20)
   A) 1-GRAMS: SEGMENTAR EN PALABRAS MÁS POPULARES (MENOR ESPACIO MUESTRAL -0.001-) Y MENOS POPULARES (EJ: 0.05)
   B) 2-GRAMS (EJ: 0.1)
   C) 3-GRAMS (EJ:0.2)
