@@ -378,9 +378,9 @@ stringrow <- function(string, dataset, numrow) {
 }
 ```
 
-As an example, if applied with the string "plans" to the 3rd row of the news dataset:
+As an example, if applied with the string "plans" to the 4rth row of the news dataset:
 ```{r}
-stringrow("plans", final_news, numrow = 3)
+stringrow("plans", final_news, numrow = 4)
 ```
 
 #### Function that nests previous function and applies it to a dataset
@@ -415,6 +415,7 @@ It starts by converting the input string to the same testing dataset format (low
 stringsure <- function(string, dataset) {
         strsearch <- str_to_lower(string) %>%
                 str_extract_all(., boundary("word")) %>%
+                unlist(., use.names = FALSE) %>%
                 str_flatten(., collapse = " ")
         strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                 str_which(dataset, .)
@@ -464,7 +465,6 @@ wordpred2(string = "the faith during the", dataset = testdata)
 
 
 PENDIENTE:
-1. PROBAR TRUNCANDO TEXTOS CUANDO APARECE ALGUN ". : ? !" (OMITIR MR. MRS. SR.).
 2. VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR: BUSCAR MNEMOTECNICA PARA DEFINIR N A PARTIR DEL % DE CADA SEGMENTO N-GRAM (PARETO 80/20)
   A) 1-GRAMS: SEGMENTAR EN PALABRAS MÁS POPULARES (MENOR ESPACIO MUESTRAL -0.001-) Y MENOS POPULARES (EJ: 0.05)
   B) 2-GRAMS (EJ: 0.1)
