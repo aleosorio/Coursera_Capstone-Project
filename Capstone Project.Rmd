@@ -88,10 +88,18 @@ splitsentences <- function(dataset) {
 }
 ```
 
-Afterwards, all 1-gram and "" strings were eliminated with the following function:
+Applying the function to create the final datasets:
+```{r, cache = TRUE}
+words_twitter <- tidystrings(datatwitter)
+words_blogs <- tidystrings(datablogs)
+words_news <- tidystrings(datanews)
+```
+
+
+Afterwards, all 1-gram, 2-gram and "" strings were eliminated with the following function:
 ```{r}
 subsetstring <- function(dataset) {
-        result <- subset(dataset, str_count(dataset, pattern = boundary("word")) >=2)
+        result <- subset(dataset, str_count(dataset, pattern = boundary("word")) > 2)
         return(result)
 }
 ```
