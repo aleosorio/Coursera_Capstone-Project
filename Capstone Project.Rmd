@@ -78,37 +78,29 @@ With this result, plus the same basic visual comparisons (head, tail, str, is.na
 
 #### Splitting texts into pargraphs made up of lower-case-space-separated words 
 
-The following function turns strings into lower-case format and splits them into pargraphs (using ".", ":", "?", "!" type characters and ommiting some trivial abbreviations, such as "sr.", "mr.", "mrs.", "apt.", "ave.", "blvd.", "bldg.", "ct.", "dr.", "ext.", "ft.", "fwy.", "hwy.", ln.", "mt.", "sq.", "rd.", "st.", "in.", "mi.", "yd.", "lb.", "oz.", "qt.", "pt.", "gal.", "cal.", "mph." ).  Each paragraph is treated as an extra vector element.
+The following function turns strings into lower-case format and splits them into pargraphs (using ".", ":", "?", "!" type characters and ommiting some trivial abbreviations, such as "sr.", "mr.", "mrs.", "apt.", "ave.", "blvd.", "bldg.", "ct.", "dr.", "ext.", "ft.", "fwy.", "hwy.", ln.", "mt.", "sq.", "rd.", "st.", "in.", "mi.", "yd.", "lb.", "oz.", "qt.", "pt.", "gal.", "cal.", "mph." ).  Each paragraph is treated as an extra vector element.  Additionally, all 1-gram, 2-gram and "" strings were eliminated.
 ```{r}
 splitsentences <- function(dataset) {
         result <- str_to_lower(dataset) %>%
                 str_split(., "(?<!((^|\\s)mr|(^|\\s)mrs|(^|\\s)sr|(^|\\s)apt|(^|\\s)ave|(^|\\s)blvd|(^|\\s)bldg|(^|\\s)ct|(^|\\s)dr|(^|\\s)ext|(^|\\s)ft|(^|\\s)fwy|(^|\\s)hwy|(^|\\s)ln|(^|\\s)mt|(^|\\s)sq|(^|\\s)st|(^|\\s)rd|(^|\\s)in|(^|\\s)mi|(^|\\s)yd|(^|\\s)lb|(^|\\s)oz|(^|\\s)qt|(^|\\s)pt|(^|\\s)gal|(^|\\s)cal|(^|\\s)mph))\\.|\\?|\\!|\\:") %>%
                 unlist(., use.names = FALSE) %>%
+                subset(., str_count(., pattern = boundary("word")) > 2)
         return(result)
 }
 ```
 
-Applying the function to create the final datasets:
-```{r, cache = TRUE}
-words_twitter <- tidystrings(datatwitter)
-words_blogs <- tidystrings(datablogs)
-words_news <- tidystrings(datanews)
-```
-
-
-Afterwards, all 1-gram, 2-gram and "" strings were eliminated with the following function:
+Applying the function to original datasets:
 ```{r}
-subsetstring <- function(dataset) {
-        result <- subset(dataset, str_count(dataset, pattern = boundary("word")) > 2)
-        return(result)
-}
+words_twitter <- splitsentences(datatwitter)
+words_blogs <- splitsentences(datablogs)
+words_news <- splitsentences(datanews)
 ```
 
 Finally, the following function converts the previous one's output into a vector with the strings turned into one-space-separated words:
 ```{r}
 tidystrings <- function(dataset) {
         datalength <- length(dataset)
-        result <- result %>%
+        result <- dataset %>%
                 str_extract_all(., boundary("word"))
         for(i in 1:datalength) {
                 result[[i]] <- str_flatten(result[[i]], collapse = " ")
@@ -119,9 +111,9 @@ tidystrings <- function(dataset) {
 
 Applying the function to create the final datasets:
 ```{r, cache = TRUE}
-words_twitter <- tidystrings(datatwitter)
-words_blogs <- tidystrings(datablogs)
-words_news <- tidystrings(datanews)
+words_twitter <- tidystrings(words_twitter)
+words_blogs <- tidystrings(words_blogs)
+words_news <- tidystrings(words_news)
 ```
 
 As an example of the separate-underscore-words results obtained, the following string:
