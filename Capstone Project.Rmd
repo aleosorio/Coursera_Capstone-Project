@@ -78,22 +78,28 @@ With this result, plus the same basic visual comparisons (head, tail, str, is.na
 
 #### Splitting texts into pargraphs made up of lower-case-space-separated words 
 
-The following function turns strings into lower-case format and splits them into pargraphs (using ".", ":" type characters and ommiting words such as "sr.", "mr.", etc.).  Each paragraph is treated as an extra vector element.  It also filters all "" elements.
+The following function turns strings into lower-case format and splits them into pargraphs (using ".", ":", "?", "!" type characters and ommiting some trivial abbreviations, such as "sr.", "mr.", "mrs.", "apt.", "ave.", "blvd.", "bldg.", "ct.", "dr.", "ext.", "ft.", "fwy.", "hwy.", ln.", "mt.", "sq.", "rd.", "st.", "in.", "mi.", "yd.", "lb.", "oz.", "qt.", "pt.", "gal.", "cal.", "mph." ).  Each paragraph is treated as an extra vector element.
 ```{r}
 splitsentences <- function(dataset) {
         result <- str_to_lower(dataset) %>%
-                str_split(., "(?<!(mr|mrs|sr|st|att))\\.|\\?|\\!|\\:") %>%
+                str_split(., "(?<!((^|\\s)mr|(^|\\s)mrs|(^|\\s)sr|(^|\\s)apt|(^|\\s)ave|(^|\\s)blvd|(^|\\s)bldg|(^|\\s)ct|(^|\\s)dr|(^|\\s)ext|(^|\\s)ft|(^|\\s)fwy|(^|\\s)hwy|(^|\\s)ln|(^|\\s)mt|(^|\\s)sq|(^|\\s)st|(^|\\s)rd|(^|\\s)in|(^|\\s)mi|(^|\\s)yd|(^|\\s)lb|(^|\\s)oz|(^|\\s)qt|(^|\\s)pt|(^|\\s)gal|(^|\\s)cal|(^|\\s)mph))\\.|\\?|\\!|\\:") %>%
                 unlist(., use.names = FALSE) %>%
-                subset(., . != "")
         return(result)
 }
 ```
 
-The following function nests the previous one, converting its output into a vector with the strings turned into one-space-separated words:
+Afterwards, all 1-gram and "" strings were eliminated with the following function:
+```{r}
+subsetstring <- function(dataset) {
+        result <- subset(dataset, str_count(dataset, pattern = boundary("word")) >=2)
+        return(result)
+}
+```
+
+Finally, the following function converts the previous one's output into a vector with the strings turned into one-space-separated words:
 ```{r}
 tidystrings <- function(dataset) {
-        result <- splitsentences(dataset)
-        datalength <- length(result)
+        datalength <- length(dataset)
         result <- result %>%
                 str_extract_all(., boundary("word"))
         for(i in 1:datalength) {
