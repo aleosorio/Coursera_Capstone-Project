@@ -78,23 +78,23 @@ With this result, plus the same basic visual comparisons (head, tail, str, is.na
 
 #### Splitting texts into pargraphs made up of lower-case-space-separated words 
 
-The following function splits each vector element (a string) into pargraphs with which it creates extra vector elements.  It also filters all "" elements.
+The following function turns strings into lower-case format and splits them into pargraphs (using ".", ":" type characters and ommiting words such as "sr.", "mr.", etc.).  Each paragraph is treated as an extra vector element.  It also filters all "" elements.
 ```{r}
 splitsentences <- function(dataset) {
-        result <- str_split(dataset, "(?<!(mr|mrs|sr|Mr|Mrs|Sr|MR|MRS|SR))\\.|\\?|\\!|\\:") %>%
-                unlist(.) %>%
+        result <- str_to_lower(dataset) %>%
+                str_split(., "(?<!(mr|mrs|sr|st|att))\\.|\\?|\\!|\\:") %>%
+                unlist(., use.names = FALSE) %>%
                 subset(., . != "")
         return(result)
 }
 ```
 
-The following function nests the previous one, converting its output into a vector with the strings turned into lower-case and space-separated words:
+The following function nests the previous one, converting its output into a vector with the strings turned into one-space-separated words:
 ```{r}
-lowcasewords <- function(dataset) {
+tidystrings <- function(dataset) {
         result <- splitsentences(dataset)
         datalength <- length(result)
         result <- result %>%
-                str_to_lower(.) %>%
                 str_extract_all(., boundary("word"))
         for(i in 1:datalength) {
                 result[[i]] <- str_flatten(result[[i]], collapse = " ")
@@ -105,15 +105,19 @@ lowcasewords <- function(dataset) {
 
 Applying the function to create the final datasets:
 ```{r, cache = TRUE}
-words_twitter <- lowcasewords(datatwitter)
-words_blogs <- lowcasewords(datablogs)
-words_news <- lowcasewords(datanews)
+words_twitter <- tidystrings(datatwitter)
+words_blogs <- tidystrings(datablogs)
+words_news <- tidystrings(datanews)
 ```
 
-An example of the separate-underscore-words results obtained:
-
+As an example of the separate-underscore-words results obtained, the following string:
 ```{r, echo = FALSE}
-head(words_news, 7)
+datanews[2]
+```
+
+was turned into:
+```{r, echo = FALSE}
+words_news[2:4]
 ```
 
 #### Cleaning foreign languages/ damaged strings
@@ -400,10 +404,12 @@ The performance obtained with the later functions, was extremly better than the 
 
 #### Wrapper that applies stringset function only to strings available in the input set
 
-It starts by converting the input string to lower_case.  In case there's no match for the string in the dataset, it reduces the string's n-gram by 1 (by taking out its first word) and repeats until it finds the first available string. If it goes down to a 1-gram string and finds no result, it returns an empty dataframe (with the same format of a non-empty output).
+It starts by converting the input string to the same testing dataset format (lower_case_space_separated_no_punctuation_words).  In case there's no match for the string in the dataset, it reduces the string's n-gram by 1 (by taking out its first word) and repeats until it finds the first available string. If it goes down to a 1-gram string and finds no result, it returns an empty dataframe (with the same format of a non-empty output).
 ```{r}
 stringsure <- function(string, dataset) {
-        strsearch <- str_to_lower(string)
+        strsearch <- str_to_lower(string) %>%
+                str_extract_all(., boundary("word")) %>%
+                str_flatten(., collapse = " ")
         strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                 str_which(dataset, .)
         strdisp <- length(strwhere)
