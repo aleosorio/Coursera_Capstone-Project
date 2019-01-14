@@ -470,6 +470,37 @@ ALGORITMO Y ESPACIO MUESTRAL VARIABILES, EN FUNCIÓN DE N-GRAMS A BUSCAR
 ### IV.a. Popular N-grams
 LOS MÁS POPULARES (PARETO 80/20), DE DATASET PREDEFINIDO => MECANISMO 1
 
+#### Function that adds the elements of an ordered vector, up to each position within the vector
+Output: a numeric vector with length equal to the input's length
+```{r}
+varsum <- function(inputvect) {
+        numrow <- length(inputvect)
+        result <- c()
+        for(i in 1:numrow) {
+             result <- c(result, sum(inputvect[1:i]))
+        }
+        return(result)
+}
+```
+
+#### Function that identifies the row of an ordered vector, up to which its elements add up to a certain % of the total vector
+Output: a number equal to the number of elements selected
+```{r}
+varselect <- function(inputvect, cutperc) {
+        inputvect <- varsum(inputvect)
+        suminput <- inputvect[length(inputvect)]
+        realperc <- 0
+        result <- 0
+        while(realperc < cutperc) {
+                realperc <- inputvect[result + 1]/suminput
+                result <- result + 1
+        }
+        return(result)
+}
+```
+
+CON FUNCIÓN ANTERIOR, IDENTIFICAR FREQ Y SELECCIONAR PALABRAS HASTA DICHA FREQ.
+
 ### IV.b. Unfrequent N-grams
 2. LOS MENOS POPULARES, DE BÚSQUEDAS SPOT, CON ESPACIOS MUESTRALES EVENTUALMENTE VARIABLES => MECANISMO 2. BUSCAR MNEMOTECNICA PARA DEFINIR N POR N-GRAM. EJ BURDO:
   A) 1-GRAMS (EJ: 0.05)
