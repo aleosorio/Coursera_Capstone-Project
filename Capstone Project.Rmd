@@ -208,10 +208,10 @@ ngramrowfreq <- function(ngram, dataset, rownum) {
 
 As an example follows a 3-gram row frequency count, using the 3rd row of the news data:
 ```{r, cache = TRUE, echo = FALSE}
-head(ngramrowfreq(ngram = 3, dataset = final_news, rownum= 3), 3)
+head(ngramrowfreq(ngram = 3, dataset = final_news, rownum= 3), 5)
 ```
 
-#### Multirow n-grams frequency counter and probability calculator
+#### Multirow n-grams frequency counter
 
 Function that nested the previous function, within a loop along the length of the dataset.  The returned data frame was grouped by n-gram, summarized and arranged by frequency.  Additionally, it added a column with the dimension of each n-gram.
 
@@ -271,7 +271,7 @@ barplot(names.arg = head(freq_news)$string, height = head(freq_news)$freq)
 
 ## III. Appendix 3: Predictive Models
 
-### III.a. Predictive Algorithms Based on Searching Pre-calculated n-grams
+### III.a. Predictive Algorithms Based on Searching Within Pre-calculated n-gram Datasets
 
 #### Preliminary Data Set
 
@@ -282,7 +282,7 @@ sampletrain <- c(sample(final_blogs, 1000), sample(final_news, 1000), sample(fin
 
 #### n-gram Sets
 
-Function that generates n-grams (from 2-grams up to the n specified) based on the Primary Set (previously obtained). 
+Function that generates n-grams (from 2-grams up to the n specified) based on the previously obtained Preliminary Data Set. 
 ```{r}
 ngramsetgen <- function(n, dataset) {
         ngramsets <- data_frame(string = character(), freq = integer(), n = integer())
@@ -349,9 +349,9 @@ As an example, if applied again with the 4-gram string "and a case of":
 wordpred(string = "and a case of", dataset = samplengram)
 ```
 
-The problem with the "search engine" approach, is that it requires enormous amount of processing in order to generate all n-gram Sets from which to predict later.  Therefore a different approach was attempted further on, consisting on generating the n-gram sets based on the string that requires prediction, as follows in the next chapter.
+The problem with the "search engine" as a standalone approach, is that it requires enormous amount of processing in order to generate all n-gram sets from which to predict later.  Therefore a different approach was attempted further on, consisting on generating the n-gram sets on demand, based on the string that requires prediction, as follows in the next chapter.
 
-### III.c. Predictive Algorithms Based on Searching the String with which to calculate the required n-grams
+### III.c. Predictive Algorithms Based on On Demand n-gram Dataset Generation and Search
 
 #### Function that generates dataset to work with
 ```{r}
@@ -463,9 +463,18 @@ As an example, if applied again with the 4-gram string "the faith during the":
 wordpred2(string = "the faith during the", dataset = testdata)
 ```
 
+## IV. Appendix 4: Final Solution
 
-PENDIENTE:
-2. VARIABILIZAR ESPACIO MUESTRAL EN FUNCIÓN DE N-GRAMS A BUSCAR: BUSCAR MNEMOTECNICA PARA DEFINIR N A PARTIR DEL % DE CADA SEGMENTO N-GRAM (PARETO 80/20)
-  A) 1-GRAMS: SEGMENTAR EN PALABRAS MÁS POPULARES (MENOR ESPACIO MUESTRAL -0.001-) Y MENOS POPULARES (EJ: 0.05)
+ALGORITMO Y ESPACIO MUESTRAL VARIABILES, EN FUNCIÓN DE N-GRAMS A BUSCAR
+
+### IV.a. Popular N-grams
+LOS MÁS POPULARES (PARETO 80/20), DE DATASET PREDEFINIDO => MECANISMO 1
+
+### IV.b. Unfrequent N-grams
+2. LOS MENOS POPULARES, DE BÚSQUEDAS SPOT, CON ESPACIOS MUESTRALES EVENTUALMENTE VARIABLES => MECANISMO 2. BUSCAR MNEMOTECNICA PARA DEFINIR N POR N-GRAM. EJ BURDO:
+  A) 1-GRAMS (EJ: 0.05)
   B) 2-GRAMS (EJ: 0.1)
-  C) 3-GRAMS (EJ:0.2)
+  C) 3-GRAMS (EJ: 0.2)
+  D) ETC
+
+### IV.c. Integrated Solution
