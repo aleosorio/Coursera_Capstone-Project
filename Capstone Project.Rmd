@@ -239,7 +239,7 @@ head(ngramsetfreq(ngram = 3, dataset = final_news[1:5]), 4)
 
 #### Twitter dataset
 
-Applying the Multirow n-grams frequency counter to the first 1,000 rows of the dataset, the following results were obtained for 1 and 3-grams:
+Applying the Multirow n-grams frequency counter to the first 1,000 rows of the dataset, the following results were obtained for 1-grams:
 
 1-grams:
 ```{r, echo = FALSE, cache = TRUE}
@@ -247,15 +247,9 @@ freq_twitter <- ngramsetfreq(ngram = 1, dataset = final_twitter[1:1000])
 barplot(names.arg = head(freq_twitter)$string, height = head(freq_twitter)$freq)
 ```
 
-3-grams:
-```{r, echo = FALSE, cache = TRUE}
-freq_twitter <- ngramsetfreq(ngram = 3, dataset = final_twitter[1:1000])
-barplot(names.arg = head(freq_twitter)$string, height = head(freq_twitter)$freq)
-```
-
 #### Blogs dataset
 
-Likewise, the following 3-gram results were obtained.
+Likewise, the following 3-gram results were obtained for this dataset.
 ```{r, echo = FALSE, cache = TRUE}
 freq_blogs <- ngramsetfreq(ngram = 3, dataset = final_blogs[1:1000])
 barplot(names.arg = head(freq_blogs)$string, height = head(freq_blogs)$freq)
@@ -364,9 +358,14 @@ datagen <- function(percent, dataset1, dataset2, dataset3) {
 }
 ```
 
-The testing dataset was built with 40% of each available dataset (blogs, news and twitter), as follows:
+The testing dataset was built with 40% of each available datasets (blogs, news and twitter), as follows:
 ```{r, cache = TRUE}
 testdata <- datagen(.4, final_blogs, final_news, final_twitter)
+```
+
+The following (pretty large) dataset was obtained:
+```{r}
+str(testdata)
 ```
 
 
@@ -401,7 +400,7 @@ stringset <- function(string, dataset) {
 }
 ```
 
-As an example, if applied with the string "to the" to a small sample of the testing dataset:
+As an example, if applied with the string "to the" to a small sample of the testdata dataset:
 ```{r}
 head(stringset("to the", sample(testdata, 1000)), 5)
 ```
@@ -470,7 +469,9 @@ ALGORITMO Y ESPACIO MUESTRAL VARIABILES, EN FUNCIÓN DE N-GRAMS A BUSCAR
 ### IV.a. Popular N-grams
 LOS MÁS POPULARES (PARETO 80/20), DE DATASET PREDEFINIDO => MECANISMO 1
 
-#### Function that adds the elements of an ordered vector, up to each position within the vector
+#### Required Functions
+
+##### Function that adds the elements of an ordered vector, up to each position within the vector
 Output: a numeric vector with length equal to the input's length
 ```{r}
 varsum <- function(inputvect) {
@@ -483,7 +484,7 @@ varsum <- function(inputvect) {
 }
 ```
 
-#### Function that identifies the row of an ordered vector, up to which its elements add up to a certain % of the total vector
+##### Function that identifies the row of an ordered vector, up to which its elements add up to a certain % of the total vector
 Output: a number equal to the number of elements selected
 ```{r}
 varselect <- function(inputvect, cutperc) {
@@ -499,7 +500,29 @@ varselect <- function(inputvect, cutperc) {
 }
 ```
 
-CON FUNCIÓN ANTERIOR, IDENTIFICAR FREQ Y SELECCIONAR PALABRAS HASTA DICHA FREQ.
+##### Function that subsets a "string/freq/n"" type dataframe, within the freq that corresponds to the output (row number) given by the varselect function
+```{r}
+stringselect <- function(inputdf, cutperc) {
+        rownum <- varselect(inputdf$freq, cutperc)
+        freqvect <- unique(inputdf$freq[1:rownum])
+        result <- filter(inputdf, freq %in% freqvect)
+        return(result)
+        
+}
+```
+
+As an example, if applied to the 1-gram frequency twitter dataset previously obtained (in II.b.), with a 60% threshold, the following "tail" was obtained:
+```{r}
+tail(stringselect(freq_twitter, .6))
+```
+
+Meaning that all 1-grams with equal or higher frequency than 6, that belong in the freq_twitter$string vector, should be considered within said 60% threshold.
+
+#### Obtained Results
+
+##### 1-Grams
+
+
 
 ### IV.b. Unfrequent N-grams
 2. LOS MENOS POPULARES, DE BÚSQUEDAS SPOT, CON ESPACIOS MUESTRALES EVENTUALMENTE VARIABLES => MECANISMO 2. BUSCAR MNEMOTECNICA PARA DEFINIR N POR N-GRAM. EJ BURDO:
