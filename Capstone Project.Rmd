@@ -516,12 +516,63 @@ As an example, if applied to the 1-gram frequency twitter dataset previously obt
 tail(stringselect(freq_twitter, .6))
 ```
 
-Meaning that all 1-grams with equal or higher frequency than 6, that belong in the freq_twitter$string vector, should be considered within said 60% threshold.
+Meaning that all 1-grams with equal or higher frequency than 6, that belong in the freq_twitter$string vector, would be considered within said 60% threshold.
+
+##### Function that generates a matrix with n predicted next-words to a string vector, within a sample of testdata dataset
+```{r}
+vectwordpred <- function(stringvect, numpred, datatest, sampdata) {
+        lengthvect <- length(stringvect)
+        sampdata <- ceiling(length(datatest)*sampdata)
+        finresult <- matrix(nrow = lengthvect, ncol = numpred)
+        for(j in 1:numpred) {
+                findata <- sample(datatest, sampdata)
+                result <- c()
+                for (i in 1:lengthvect) {
+                        result <- c(result, wordpred2(stringvect[i], findata))
+                }
+                finresult[,j] <- result
+        }
+        return(finresult)
+}
+```
+
+As an example, the results obtained with a subset of freq_twitter$string as a 1-gram input vector, were the following:
+
+1. Input string vector:
+```{r}
+freq_twitter$string[1:10]
+```
+
+2. Output obtained, with 5 predicted next words, within a dataset 1% of testdata:
+```{r}
+vectwordpred(freq_twitter$string[1:10], 5, testdata, 0.001)
+```
+
+So, besides string N°4 ("a", whose next-word predictions vary between 4 possible values: "good", "great", "few" and "little") the rest had pretty stable predictions.
 
 #### Obtained Results
 
 ##### 1-Grams
+Selected 1-grams dataset, using 10.000 strings out of the testdata dataset, with an accumulated frequency threshold (cutperc) of 70%:
+```{r, cache = TRUE}
+popular1grams <- ngramsetfreq(ngram = 1, dataset = sample(testdata, 10000)) %>%
+        stringselect(., .7)
+```
 
+Obtained input dataset:
+```{r}
+glimpse(popular1grams)
+```
+
+Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 1% of testdata:
+```{r, cache = TRUE}
+wordpred1grams <- vectwordpred(popular1grams$string, 10, testdata, 0.001)
+```
+
+The following matrix with 10 predictions for each 1-gram was obtained:
+```{r}
+head(wordpred1grams, 5)
+```
 
 
 ### IV.b. Unfrequent N-grams
