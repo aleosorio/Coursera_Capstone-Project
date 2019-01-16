@@ -477,8 +477,10 @@ Output: a numeric vector with length equal to the input's length
 varsum <- function(inputvect) {
         numrow <- length(inputvect)
         result <- c()
+        accsum <- 0
         for(i in 1:numrow) {
-             result <- c(result, sum(inputvect[1:i]))
+                accsum <- accsum + inputvect[i]
+                result <- c(result, accsum)
         }
         return(result)
 }
@@ -520,7 +522,7 @@ Meaning that all 1-grams with equal or higher frequency than 6, that belong in t
 
 ##### Function that generates a matrix with n predicted next-words to a string vector, within a sample of testdata dataset
 ```{r}
-vectwordpred <- function(stringvect, numpred, datatest, sampdata) {
+mtxwordpred <- function(stringvect, numpred, datatest, sampdata) {
         lengthvect <- length(stringvect)
         sampdata <- ceiling(length(datatest)*sampdata)
         finresult <- matrix(nrow = lengthvect, ncol = numpred)
@@ -544,11 +546,47 @@ freq_twitter$string[1:10]
 ```
 
 2. Output obtained, with 5 predicted next words, within a dataset 1% of testdata:
+```{r, cache = TRUE}
+mtxwordpred(freq_twitter$string[1:10], 5, testdata, 0.001)
+```
+
+So, besides string N°4 ("a", whose next-word predictions vary between 4 possible values: "few", "little", "great" and "lot") the rest had pretty stable predictions.
+
+##### Function that identifies the most frequent value within a row of a matrix
 ```{r}
+freqvals <- function(x) {
+        ux <- unique(x)
+        tab <- match(x,ux) %>%
+                tabulate(.)
+        ux[tab == max(tab)]
+}
+```
+
+As an example, when applied to a sring vector (it returns one or more solutions):
+```{r}
+freqvals(c("hello", "bye", "one", "hello", "bye", "two"))
+```
+
+
+##### Wrapper that converts input and output of vectwordpred function into a DF with input-string vector, word-predicted vector and solutions-per-string vector
+Criteria for selecting each predicted word consists on its frequency within the n predicted next words ("numpred"" parameter in vectwordpred function).  When freqvals returns more than one solution, it randomly selects one (through sampling).
+```{r}
+vectwordpred <- function(stringvect, numpred, datatest, sampdata) {
+        mtxpred <- mtxwordpred(stringvect, numpred, datatest, sampdata)
+        modrows <- apply(mtxpred, 1, freqvals) %>%
+                sapply(., sample, size = 1)
+        uniqrows <- apply(mtxpred, 1, n_distinct)
+        result <- data_frame(string = stringvect, unique = uniqrows, modes = modrows)
+        return(result)
+}
+```
+
+As an example, when applied to the previously used subset of freq_twitter$string (with 5 predicted next words, within a dataset 1% of testdata):
+```{r, cache = TRUE}
 vectwordpred(freq_twitter$string[1:10], 5, testdata, 0.001)
 ```
 
-So, besides string N°4 ("a", whose next-word predictions vary between 4 possible values: "good", "great", "few" and "little") the rest had pretty stable predictions.
+Again, the "a" string obtains 4 possible solutions, out of which "few" was selected.
 
 #### Obtained Results
 
@@ -564,9 +602,9 @@ Obtained input dataset:
 glimpse(popular1grams)
 ```
 
-Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 1% of testdata:
+Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 0.5% of testdata:
 ```{r, cache = TRUE}
-wordpred1grams <- vectwordpred(popular1grams$string, 10, testdata, 0.001)
+wordpred1grams <- vectwordpred(popular1grams$string, 10, testdata, 0.005)
 ```
 
 The following matrix with 10 predictions for each 1-gram was obtained:
@@ -574,6 +612,19 @@ The following matrix with 10 predictions for each 1-gram was obtained:
 head(wordpred1grams, 5)
 ```
 
+Further fine tunning, basically can be made by increasing the % of testdata ("sampdata"" parameter) when applying the vectwordpred function.  Major consideration: processing time.
+
+##### 2-grams
+Applying same "recipe", the selected 2-grams dataset:
+```{r, cache = TRUE}
+popular2grams <- ngramsetfreq(ngram = 2, dataset = sample(testdata, 20000)) %>%
+        stringselect(., .7)
+```
+
+Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 0.5% of testdata:
+```{r, cache = TRUE}
+wordpred1grams <- vectwordpred(popular1grams$string, 10, testdata, 0.005)
+```
 
 ### IV.b. Unfrequent N-grams
 2. LOS MENOS POPULARES, DE BÚSQUEDAS SPOT, CON ESPACIOS MUESTRALES EVENTUALMENTE VARIABLES => MECANISMO 2. BUSCAR MNEMOTECNICA PARA DEFINIR N POR N-GRAM. EJ BURDO:
