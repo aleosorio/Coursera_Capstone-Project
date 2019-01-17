@@ -471,51 +471,32 @@ LOS MÁS POPULARES (PARETO 80/20), DE DATASET PREDEFINIDO => MECANISMO 1
 
 #### Required Functions
 
-##### Function that adds the elements of an ordered vector, up to each position within the vector
-Output: a numeric vector with length equal to the input's length
-```{r}
-varsum <- function(inputvect) {
-        numrow <- length(inputvect)
-        result <- c()
-        accsum <- 0
-        for(i in 1:numrow) {
-                accsum <- accsum + inputvect[i]
-                result <- c(result, accsum)
-        }
-        return(result)
-}
-```
-
-##### Function that identifies the row of an ordered vector, up to which its elements add up to a certain % of the total vector
-Output: a number equal to the number of elements selected
+##### Function that returns a vector of unique values, from an sorted numeric vector (decreasing frequencies in this case), that represent a certain % of its total unique values
 ```{r}
 varselect <- function(inputvect, cutperc) {
-        inputvect <- varsum(inputvect)
-        suminput <- inputvect[length(inputvect)]
-        realperc <- 0
-        result <- 0
-        while(realperc < cutperc) {
-                realperc <- inputvect[result + 1]/suminput
-                result <- result + 1
-        }
-        return(result)
+        uniquevect <- unique(inputvect) %>%
+                sort(., decreasing = TRUE)
+        numunique <- uniquevect %>%
+                length(.) %>%
+                "*"(cutperc) %>%
+                ceiling(.)
+        return(uniquevect[1:numunique])
 }
 ```
 
 ##### Function that subsets a "string/freq/n"" type dataframe, within the freq that corresponds to the output (row number) given by the varselect function
+If the lowest freq in "freqvect" (vector of selected frequencies in the function) is equal to 1 (therefore capturing the whole DF), it filters the DF with frequencies > 1.
 ```{r}
 stringselect <- function(inputdf, cutperc) {
-        rownum <- varselect(inputdf$freq, cutperc)
-        freqvect <- unique(inputdf$freq[1:rownum])
-        result <- filter(inputdf, freq %in% freqvect)
+        freqvect <- varselect(inputdf$freq, cutperc)
+        result <- filter(inputdf, inputdf$freq %in% freqvect)
         return(result)
-        
 }
 ```
 
-As an example, if applied to the 1-gram frequency twitter dataset previously obtained (in II.b.), with a 60% threshold, the following "tail" was obtained:
+As an example, if applied to the 1-gram frequency twitter dataset previously obtained (in II.b.), with a 80% threshold, the following "tail" was obtained:
 ```{r}
-tail(stringselect(freq_twitter, .6))
+tail(stringselect(freq_twitter, .8))
 ```
 
 Meaning that all 1-grams with equal or higher frequency than 6, that belong in the freq_twitter$string vector, would be considered within said 60% threshold.
@@ -533,6 +514,7 @@ mtxwordpred <- function(stringvect, numpred, datatest, sampdata) {
                         result <- c(result, wordpred2(stringvect[i], findata))
                 }
                 finresult[,j] <- result
+                print(j)
         }
         return(finresult)
 }
@@ -550,7 +532,7 @@ freq_twitter$string[1:10]
 mtxwordpred(freq_twitter$string[1:10], 5, testdata, 0.001)
 ```
 
-So, besides string N°4 ("a", whose next-word predictions vary between 4 possible values: "few", "little", "great" and "lot") the rest had pretty stable predictions.
+So, besides string N°4 ("a", whose next-word predictions vary between 3 possible values: "few", "great" and "lot") the rest had pretty stable predictions.
 
 ##### Function that identifies the most frequent value within a row of a matrix
 ```{r}
@@ -562,13 +544,13 @@ freqvals <- function(x) {
 }
 ```
 
-As an example, when applied to a sring vector (it returns one or more solutions):
+As an example, when applied to a sring vector (it can return one or more solutions):
 ```{r}
 freqvals(c("hello", "bye", "one", "hello", "bye", "two"))
 ```
 
 
-##### Wrapper that converts input and output of vectwordpred function into a DF with input-string vector, word-predicted vector and solutions-per-string vector
+##### Wrapper that converts input and output of mtxwordpred function into a DF with input-string vector, word-predicted vector and solutions-per-string vector
 Criteria for selecting each predicted word consists on its frequency within the n predicted next words ("numpred"" parameter in vectwordpred function).  When freqvals returns more than one solution, it randomly selects one (through sampling).
 ```{r}
 vectwordpred <- function(stringvect, numpred, datatest, sampdata) {
@@ -586,15 +568,15 @@ As an example, when applied to the previously used subset of freq_twitter$string
 vectwordpred(freq_twitter$string[1:10], 5, testdata, 0.001)
 ```
 
-Again, the "a" string obtains 4 possible solutions, out of which "few" was selected.
+Again, the "a" string obtains 4 possible solutions, out of which "few" was selected (either by frequency or by randomly selecting one out of all that share the same frequency).
 
 #### Obtained Results
 
 ##### 1-Grams
-Selected 1-grams dataset, using 10.000 strings out of the testdata dataset, with an accumulated frequency threshold (cutperc) of 70%:
+Selected 1-grams dataset, using 20.000 strings out of the testdata dataset, with an accumulated frequency threshold (cutperc) of 80%:
 ```{r, cache = TRUE}
-popular1grams <- ngramsetfreq(ngram = 1, dataset = sample(testdata, 10000)) %>%
-        stringselect(., .7)
+popular1grams <- ngramsetfreq(ngram = 1, dataset = sample(testdata, 20000)) %>%
+        stringselect(., .8)
 ```
 
 Obtained input dataset:
@@ -612,19 +594,30 @@ The following matrix with 10 predictions for each 1-gram was obtained:
 head(wordpred1grams, 5)
 ```
 
-Further fine tunning, basically can be made by increasing the % of testdata ("sampdata"" parameter) when applying the vectwordpred function.  Major consideration: processing time.
-
 ##### 2-grams
-Applying same "recipe", the selected 2-grams dataset:
+Applying almost the same "recipe" (frequency threshold "cutperc" raised to 90% due to fastest processing time), the selected 2-grams dataset:
 ```{r, cache = TRUE}
 popular2grams <- ngramsetfreq(ngram = 2, dataset = sample(testdata, 20000)) %>%
-        stringselect(., .7)
+        stringselect(., .9)
 ```
 
-Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 0.5% of testdata:
+Due to fastest processing time, dataset size was raised to 1%
 ```{r, cache = TRUE}
-wordpred1grams <- vectwordpred(popular1grams$string, 10, testdata, 0.005)
+wordpred2grams <- vectwordpred(popular2grams$string, 10, testdata, 0.01)
 ```
+
+##### 3-grams
+Likewise:
+```{r, cache = TRUE}
+popular3grams <- ngramsetfreq(ngram = 3, dataset = sample(testdata, 20000)) %>%
+        stringselect(., .9)
+```
+
+```{r, cache = TRUE}
+wordpred3grams <- vectwordpred(popular3grams$string, 10, testdata, 0.01)
+```
+
+Further fine tunning can be carried on by modifying either the size of the dataset when applying ngramsetfreq function (currently at 90%), or the % of testdata ("sampdata" parameter) when applying the vectwordpred function.  Major consideration: processing time.
 
 ### IV.b. Unfrequent N-grams
 2. LOS MENOS POPULARES, DE BÚSQUEDAS SPOT, CON ESPACIOS MUESTRALES EVENTUALMENTE VARIABLES => MECANISMO 2. BUSCAR MNEMOTECNICA PARA DEFINIR N POR N-GRAM. EJ BURDO:
