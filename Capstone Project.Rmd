@@ -573,51 +573,75 @@ Again, the "a" string obtains 4 possible solutions, out of which "few" was selec
 #### Obtained Results
 
 ##### 1-Grams
-Selected 1-grams dataset, using 20.000 strings out of the testdata dataset, with an accumulated frequency threshold (cutperc) of 80%:
+Selected 1-grams dataset, using 20.000 strings out of the testdata dataset
 ```{r, cache = TRUE}
-popular1grams <- ngramsetfreq(ngram = 1, dataset = sample(testdata, 20000)) %>%
-        stringselect(., .8)
+popular1grams <- ngramsetfreq(ngram = 1, dataset = sample(testdata, 20000))
+```
+
+Final 1-grams dataset, with an accumulated frequency threshold (cutperc) of 90%:
+```{r, cache = TRUE}
+popular1grams_final <- stringselect(popular1grams, .9)
 ```
 
 Obtained input dataset:
 ```{r}
-glimpse(popular1grams)
+glimpse(popular1grams_final)
 ```
 
 Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 0.5% of testdata:
 ```{r, cache = TRUE}
-wordpred1grams <- vectwordpred(popular1grams$string, 10, testdata, 0.005)
+wordpred1grams <- vectwordpred(popular1grams_final$string, 10, testdata, 0.005)
 ```
 
-The following matrix with 10 predictions for each 1-gram was obtained:
+The following resulting DF was obtained:
 ```{r}
 head(wordpred1grams, 5)
 ```
 
 ##### 2-grams
-Applying almost the same "recipe" (frequency threshold "cutperc" raised to 90% due to fastest processing time), the selected 2-grams dataset:
+Likewise:
 ```{r, cache = TRUE}
-popular2grams <- ngramsetfreq(ngram = 2, dataset = sample(testdata, 20000)) %>%
-        stringselect(., .9)
+popular2grams <- ngramsetfreq(ngram = 2, dataset = sample(testdata, 20000))
 ```
 
-Due to fastest processing time, dataset size was raised to 1%
 ```{r, cache = TRUE}
-wordpred2grams <- vectwordpred(popular2grams$string, 10, testdata, 0.01)
+popular2grams_final <- stringselect(popular2grams, .9)
+```
+
+Due to fastest processing time, % size of the testdata was raised to 1%:
+```{r, cache = TRUE}
+wordpred2grams <- vectwordpred(popular2grams_final$string, 10, testdata, 0.01)
 ```
 
 ##### 3-grams
+Applying same parameters used with 2-grams:
+```{r, cache = TRUE}
+popular3grams <- ngramsetfreq(ngram = 3, dataset = sample(testdata, 20000))
+```
+
+```{r, cache = TRUE}
+popular3grams_final <- stringselect(popular3grams, .9)
+```
+
+```{r, cache = TRUE}
+wordpred3grams <- vectwordpred(popular3grams_final$string, 10, testdata, 0.01)
+```
+
+##### 4-grams
 Likewise:
 ```{r, cache = TRUE}
-popular3grams <- ngramsetfreq(ngram = 3, dataset = sample(testdata, 20000)) %>%
-        stringselect(., .9)
+popular4grams <- ngramsetfreq(ngram = 4, dataset = sample(testdata, 20000))
 ```
 
 ```{r, cache = TRUE}
-wordpred3grams <- vectwordpred(popular3grams$string, 10, testdata, 0.01)
+popular4grams_final <- stringselect(popular4grams, .85)
 ```
 
-Further fine tunning can be carried on by modifying either the size of the dataset when applying ngramsetfreq function (currently at 90%), or the % of testdata ("sampdata" parameter) when applying the vectwordpred function.  Major consideration: processing time.
+```{r, cache = TRUE}
+wordpred4grams <- vectwordpred(popular4grams_final$string, 10, testdata, 0.01)
+```
+
+Further fine tunning can be carried on by modifying either the size of the dataset when applying stringselect function (currently between 85 and 90%), or the % of testdata ("sampdata" parameter) when applying the vectwordpred function (currently between 0.5 and 1%).  Major consideration: processing time.
 
 ### IV.b. Unfrequent N-grams
 2. LOS MENOS POPULARES, DE BÚSQUEDAS SPOT, CON ESPACIOS MUESTRALES EVENTUALMENTE VARIABLES => MECANISMO 2. BUSCAR MNEMOTECNICA PARA DEFINIR N POR N-GRAM. EJ BURDO:
