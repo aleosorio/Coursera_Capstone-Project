@@ -464,10 +464,7 @@ wordpred2(string = "the faith during the", dataset = testdata)
 
 ## IV. Appendix 4: Final Solution
 
-ALGORITMO Y ESPACIO MUESTRAL VARIABILES, EN FUNCIÓN DE N-GRAMS A BUSCAR
-
 ### IV.a. Popular N-grams
-LOS MÁS POPULARES (PARETO 80/20), DE DATASET PREDEFINIDO => MECANISMO 1
 
 #### Required Functions
 
@@ -643,11 +640,20 @@ wordpred4grams <- vectwordpred(popular4grams_final$string, 10, testdata, 0.01)
 
 Further fine tunning can be carried on by modifying either the size of the dataset when applying stringselect function (currently between 85 and 90%), or the % of testdata ("sampdata" parameter) when applying the vectwordpred function (currently between 0.5 and 1%).  Major consideration: processing time.
 
-### IV.b. Unfrequent N-grams
-2. LOS MENOS POPULARES, DE BÚSQUEDAS SPOT, CON ESPACIOS MUESTRALES EVENTUALMENTE VARIABLES => MECANISMO 2. BUSCAR MNEMOTECNICA PARA DEFINIR N POR N-GRAM. EJ BURDO:
-  A) 1-GRAMS (EJ: 0.05)
-  B) 2-GRAMS (EJ: 0.1)
-  C) 3-GRAMS (EJ: 0.2)
-  D) ETC
+#### Final Dataset
+The final dataset from which popular-n-gram predictions were obtained:
+```{r}
+wordpredgrams <- 
+```
+
+
+### IV.b. Less Popular N-grams
+
+#### Required Functions
+
+##### Function that returns the position of the searched string, within the final popular-n-gram dataset
+
+DEFINIR FORMATO DE WORDPREDGRAMS MÁS LIGERO POSIBLE (STRING VECTORS, DE BÚSQUEDA Y OUTPUT) Y ESTA FUNCIÓN, QUE HAGA BÚSQUEDA EXACTA DEL STRING DE BÚSQUEDA (Y NO CONSIDERE STRINGS TRUNCOS. IE: "TO THE" NO ARROJE "TO" | "THE" | "T" | "TO THE" | ETC.)
 
 ### IV.c. Integrated Solution
+
