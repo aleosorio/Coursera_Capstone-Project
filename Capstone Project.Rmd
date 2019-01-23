@@ -409,14 +409,13 @@ The performance obtained with the later functions, was extremly better than the 
 
 #### Wrapper that applies stringset function only to strings available in the input set
 
-It starts by converting the input string to the same testing dataset format (lower_case_space_separated_no_punctuation_words) and reducing the string's n-gram (by removing first words) down to the "strlength" parameter (if applies).  In case there's no match for the string in the dataset, it continues reducing the string's n-gram by 1 (by taking out its first word) and searching until it finds the first available string. If it goes down to a 1-gram string and finds no result, it returns an empty dataframe (with the same format of a non-empty output).
+It starts by converting the input string to the same testing dataset format (lower_case_space_separated_no_punctuation_words).  In case there's no match for the string in the dataset, it continues by reducing the string's n-gram by 1 (by taking out its first word) and searching until it finds the first available string. If it goes down to a 1-gram string and finds no result, it returns an empty dataframe (with the same format of a non-empty output).
 ```{r}
-stringsure <- function(string, strlength, dataset) {
+stringsure <- function(string, dataset) {
         strsearch <- str_to_lower(string) %>%
                 str_extract_all(., boundary("word")) %>%
                 unlist(., use.names = FALSE) %>%
-                str_flatten(., collapse = " ") %>%
-                if_else(str_count(., boundary("word")) > strlength, word(., str_count(., boundary("word")) - strlength + 1, -1), .)
+                str_flatten(., collapse = " ")
         strwhere <- paste("(?<=(^|\\s))", strsearch, "\\s\\w+", sep = "") %>%
                 str_which(dataset, .)
         strdisp <- length(strwhere)
@@ -444,8 +443,8 @@ head(stringsure(string = "the faith during the", dataset = testdata), 5)
 
 Same previous function, wordpred, was modified in order to work with the current stringsure function, as follows:
 ```{r}
-wordpred2 <- function(string, strlength, dataset) {
-        pred <- stringsure(string, strlength, dataset)
+wordpred2 <- function(string, dataset) {
+        pred <- stringsure(string, dataset)
         if(nrow(pred) >0) {
                 pred <- filter(pred, freq == max(freq)) %>%
                         sample_n(., 1) %>%
@@ -655,23 +654,48 @@ Major considerations: processing time and precision.
 
 ### IV.b. Mixed and Final Solution
 
-#### Function that returns the predicted word, with initial search within the pre-calculated popular n-grams dataset (wordpredgrams)
-If there is no match within the pre-calculated n-grams dataset, a prediction is conducted using the wordpred2 function, with a 2% sample of the testdata.
+#### stringsure function's upgrade into a mixed search criteria
+This function was stripped from the initial input string's format check (transfered to the wordpredfinal function) and added an extra search criteria, consisting on always conducting the next search, after an n-gram reduction, whithin the pre-calculated n-grams dataset(ngramdata = wordpredgrams).  If unsuccessful, it applies the original stringsure's search criteria within the corresponding dataset (stringdata = sample of testdata). METER EXTRA SEARCH CRITERIA EN EL WHILE
+
 ```{r}
-wordpredfinal <- function(string, strlength, precision) {
-        strpos <- which(string == wordpredgrams$string)
-        lenstrpos <- length(strpos)
-        if(lenstrpos > 0) {
-                result <- wordpredgrams$modes[strpos]
+stringsurefinal <- function(string, ngramdata, stringdata) {
+        strwhere <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "") %>%
+                str_which(stringdata, .)
+        strdisp <- length(strwhere)
+        while(strdisp == 0 & str_count(string, boundary("word")) > 1) {
+                string <- word(string, 2, -1)
+                strwhere <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "") %>%
+                        str_which(stringdata, .)
+                strdisp <- length(strwhere)
+        }
+        if(length(strwhere) > 0) {
+                result <- stringset(strsearch , stringdata[strwhere])
         } else {
-                samplength <- ceiling(length(testdata) * precision)
-                dataset <- sample(testdata, samplength)
-                result <- wordpred2(string, strlength, dataset)
+                result <- data_frame(string = character(), freq = numeric())
         }
         return(result)
 }
 ```
 
 
-### IV.c. Integrated Solution
+#### Function that returns the predicted word, with an initial search within the pre-calculated popular n-grams dataset (wordpredgrams)
+It starts by carrying on the input string's format check (converting the input string into the same wordpredfinal$string format). If there is no direct match within the pre-calculated n-grams dataset, it continues by reducing the string's n-gram by 1 (by removing the first word) and searching within the pre-calculated n-grams dataset (wordpredgrams), until either a successful search takes place or the string's n-gram goes down to the "strlength" parameter. Beyond the "strlength" n-gram threshold, all additional predictions are conducted through the stringsurefinal function, within a testdata sample (defined by the "precision" parameter).  DECIDIR SI INTEGRA TB FUNCIÓN WORDPRED2
 
+```{r}
+wordpredfinal <- function(string, strlength, precision) {
+        strsearch <- str_to_lower(string) %>%
+                str_extract_all(., boundary("word")) %>%
+                unlist(., use.names = FALSE) %>%
+                str_flatten(., collapse = " ")
+        strpos <- which(strsearch == wordpredgrams$string)
+        lenstrpos <- length(strpos)
+        if(lenstrpos > 0) {
+                result <- wordpredgrams$modes[strpos]
+        } else {
+                samplength <- ceiling(length(testdata) * precision)
+                dataset <- sample(testdata, samplength)
+                result <- wordpred2(strsearch, strlength, dataset)
+        }
+        return(result)
+}
+```
