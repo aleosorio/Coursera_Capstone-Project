@@ -402,7 +402,7 @@ stringset <- function(string, dataset) {
 
 As an example, if applied with the string "to the" to a small sample of the testdata dataset:
 ```{r}
-head(stringset("to the", sample(testdata, 1000)), 5)
+head(stringset("to the", sample(testdata, 5000)), 5)
 ```
 
 The performance obtained with the later functions, was extremly better than the previous one.  Much so that the whole news dataset took less than 40 seconds to complete.
@@ -644,7 +644,7 @@ Binding "popularNgrams_final" tables:
 wordpredgrams <- bind_rows(wordpred1grams, wordpred2grams, wordpred3grams, wordpred4grams)
 ```
 
-Further fine tunning could be based on:
+Further fine tunning of the pre-calculated n-gram dataset, could be based on:
 
 1. Modifying the size of each dataset when applying stringselect function (currently between 85 and 90%).
 2. Modifying the % of testdata ("sampdata" parameter) when applying the vectwordpred function (currently between 0.5 and 1%).
@@ -655,23 +655,51 @@ Major considerations: processing time and precision.
 ### IV.b. Mixed and Final Solution
 
 #### stringsure function's upgrade into a mixed search criteria
-This function was stripped from the initial input string's format check (transfered to the wordpredfinal function) and added an extra search criteria, consisting on always conducting the next search, after an n-gram reduction, whithin the pre-calculated n-grams dataset(ngramdata = wordpredgrams).  If unsuccessful, it applies the original stringsure's search criteria within the corresponding dataset (stringdata = sample of testdata). METER EXTRA SEARCH CRITERIA EN EL WHILE
+This function was stripped from the initial input string's format check (transfered to the wordpredfinal function) and added an extra search criteria, consisting on always conducting the next search, after an n-gram reduction, whithin the pre-calculated n-grams dataset(ngramdata = wordpredgrams).  If unsuccessful, it applies the original stringsure's search criteria within the corresponding dataset (stringdata = sample of testdata).  Therefore it also absorbed previous wordpred2 function.
 
 ```{r}
 stringsurefinal <- function(string, ngramdata, stringdata) {
-        strwhere <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "") %>%
-                str_which(stringdata, .)
+        strlength <- str_count(string, boundary("word"))
+        strsearch <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "")
+        strwhere <- str_which(stringdata, strsearch)
         strdisp <- length(strwhere)
-        while(strdisp == 0 & str_count(string, boundary("word")) > 1) {
+        print(strdisp)
+        print(head(strwhere))
+        print(strlength)
+        print(string)
+        ngramwhere <- 0
+        while(strdisp == 0 & strlength > 1) {
                 string <- word(string, 2, -1)
-                strwhere <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "") %>%
-                        str_which(stringdata, .)
-                strdisp <- length(strwhere)
+                strlength <- str_count(string, boundary("word"))
+                strsearch <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "")
+                ngramwhere <- which(string == ngramdata$string)
+                print(ngramwhere)
+                print(string)
+                if(length(ngramwhere) > 0) {
+                        ngramresult <- ngramdata$modes[ngramwhere]
+                        strdisp <- ngramwhere
+                } else {
+                        strwhere <- str_which(stringdata, strsearch)
+                        strdisp <- length(strwhere)
+                        print(strdisp)
+                }
         }
-        if(length(strwhere) > 0) {
-                result <- stringset(strsearch , stringdata[strwhere])
+        if(strdisp > 0) {
+                if(length(ngramwhere) >0) {
+                        result <- ngramresult
+                } else {
+                        print(strsearch)
+                        print(head(strwhere))
+                        print(stringdata[strwhere[1:3]])
+                        result <- stringset(string , stringdata[strwhere]) %>%
+                                print(.) %>%
+                                filter(., freq == max(freq)) %>%
+                                sample_n(., 1) %>%
+                                select(., string) %>%
+                                word(., -1)
+                }
         } else {
-                result <- data_frame(string = character(), freq = numeric())
+                result <- "NOT ENOUGH DATA AVAILABLE TO PREDICT. TRY AGAIN WITH A DIFFERENT STRING"
         }
         return(result)
 }
@@ -679,23 +707,37 @@ stringsurefinal <- function(string, ngramdata, stringdata) {
 
 
 #### Function that returns the predicted word, with an initial search within the pre-calculated popular n-grams dataset (wordpredgrams)
-It starts by carrying on the input string's format check (converting the input string into the same wordpredfinal$string format). If there is no direct match within the pre-calculated n-grams dataset, it continues by reducing the string's n-gram by 1 (by removing the first word) and searching within the pre-calculated n-grams dataset (wordpredgrams), until either a successful search takes place or the string's n-gram goes down to the "strlength" parameter. Beyond the "strlength" n-gram threshold, all additional predictions are conducted through the stringsurefinal function, within a testdata sample (defined by the "precision" parameter).  DECIDIR SI INTEGRA TB FUNCIÓN WORDPRED2
+It starts by carrying on the input string's format check (converting the input string into the same wordpredfinal$string format). If there is no direct match within the pre-calculated n-grams dataset, it continues by reducing the string's n-gram by 1 (by removing the first word) and searching within the pre-calculated n-grams dataset (wordpredgrams), until either a successful search takes place or the string's n-gram goes down to the "strlength" parameter. Beyond the "strlength" n-gram threshold, all additional predictions are conducted through the stringsurefinal function, within a testdata sample (defined by the "precision" parameter).
 
 ```{r}
-wordpredfinal <- function(string, strlength, precision) {
+wordpredfinal <- function(string, precision, ngramdata, stringdata) {
         strsearch <- str_to_lower(string) %>%
                 str_extract_all(., boundary("word")) %>%
                 unlist(., use.names = FALSE) %>%
                 str_flatten(., collapse = " ")
-        strpos <- which(strsearch == wordpredgrams$string)
-        lenstrpos <- length(strpos)
-        if(lenstrpos > 0) {
-                result <- wordpredgrams$modes[strpos]
+        print(strsearch)
+        strlength <- str_count(strsearch, boundary("word"))
+        if(strlength <= 4) {
+                ngramwhere <- which(strsearch == ngramdata$string)
+                print(ngramwhere)
+                print(length(ngramwhere))
+                if(length(ngramwhere) > 0) {
+                        result <- ngramdata$modes[ngramwhere]
+                } else {
+                        samplength <- ceiling(length(testdata) * precision)
+                        print(samplength)
+                        stringdata <- sample(stringdata, samplength)
+                        result <- stringsurefinal(strsearch, ngramdata, stringdata)
+                }
         } else {
                 samplength <- ceiling(length(testdata) * precision)
-                dataset <- sample(testdata, samplength)
-                result <- wordpred2(strsearch, strlength, dataset)
+                print(samplength)
+                stringdata <- sample(stringdata, samplength)
+                result <- stringsurefinal(strsearch, ngramdata, stringdata)
         }
         return(result)
 }
 ```
+
+1. AGREGAR LOOP DE BUSQUEDA EN NGRAMS DATASET, HASTA LLEGAR A "STRLENGTH" (= 5 SUENA RAZONABLE).
+2. VER SI VALE LA PENA REEMPLAZAR SÍMBOLO "â" POR "'"
