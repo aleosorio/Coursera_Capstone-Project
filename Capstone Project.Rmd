@@ -149,11 +149,28 @@ langfilt <- function(lng, dataset) {
 }
 ```
 
-Final datasets:
+Obtained datasets:
 ```{r, cache = TRUE}
 final_blogs <- langfilt(lng = "en", dataset = words_blogs)
 final_news <- langfilt(lng = "en", dataset = words_news)
 final_twitter <- langfilt(lng = "en", dataset = words_twitter)
+```
+
+Finally, after obtaining some results from further analysis, in spite of the previous language filtering, strings with the "â" character were found rather frequently, such as:
+```{r, cache = TRUE}
+final_news[head(unlist(str_which(final_news, "â"), use.names = FALSE), 5)]
+```
+
+Additionally, the highest % of such strings within the obtained datasets was as follows:
+```{r, cache = TRUE}
+length(final_blogs[unlist(str_which(final_blogs, "â"), use.names = FALSE)])/ length(final_blogs)
+```
+
+Therefore, a final extra cleaning was carried on, eliminating strings that contained said character, as follows:
+```{r, cache = TRUE}
+final_blogs <- final_blogs[-unlist(str_which(final_blogs, "â"), use.names = FALSE)]
+final_news <- final_news[-unlist(str_which(final_news, "â"), use.names = FALSE)]
+final_twitter <- final_twitter[-unlist(str_which(final_twitter, "â"), use.names = FALSE)]
 ```
 
 ## II. Appendix 2: Preliminary Analysis
@@ -360,7 +377,7 @@ datagen <- function(percent, dataset1, dataset2, dataset3) {
 
 The testing dataset was built with 40% of each available datasets (blogs, news and twitter), as follows:
 ```{r, cache = TRUE}
-testdata <- datagen(.4, final_blogs, final_news, final_twitter)
+testdata <- datagen(.6, final_blogs, final_news, final_twitter)
 ```
 
 The following (pretty large) dataset was obtained:
@@ -435,9 +452,11 @@ stringsure <- function(string, dataset) {
 ```
 
 As an example, if applied with the string "the faith during the" on the testing dataset:
-```{r}
+```{r, cache = TRUE}
 head(stringsure(string = "the faith during the", dataset = testdata), 5)
 ```
+
+It's worth mentioning that the function took less than 15 seconds to search within the whole testdata dataset, which contains around MM3.5 strings.
 
 #### Function that selects the predicted word, from previous function's output
 
@@ -458,7 +477,7 @@ wordpred2 <- function(string, dataset) {
 ```
 
 As an example, if applied again with the 4-gram string "the faith during the":
-```{r}
+```{r, cache = TRUE}
 wordpred2(string = "the faith during the", dataset = testdata)
 ```
 
@@ -496,7 +515,7 @@ As an example, if applied to the 1-gram frequency twitter dataset previously obt
 tail(stringselect(freq_twitter, .8))
 ```
 
-Meaning that all 1-grams with equal or higher frequency than 6, that belong in the freq_twitter$string vector, would be considered within said 60% threshold.
+Meaning that all 1-grams with equal or higher frequency than 13, that belong in the freq_twitter$string vector, would be considered within said threshold.
 
 ##### Function that generates a matrix with n predicted next-words to a string vector, within a sample of testdata dataset
 ```{r}
@@ -511,7 +530,6 @@ mtxwordpred <- function(stringvect, numpred, datatest, sampdata) {
                         result <- c(result, wordpred2(stringvect[i], findata))
                 }
                 finresult[,j] <- result
-                print(j)
         }
         return(finresult)
 }
@@ -524,12 +542,12 @@ As an example, the results obtained with a subset of freq_twitter$string as a 1-
 freq_twitter$string[1:10]
 ```
 
-2. Output obtained, with 5 predicted next words, within a dataset 1% of testdata:
+2. Output obtained, with 9 predicted next words, within a dataset 1% of testdata:
 ```{r, cache = TRUE}
-mtxwordpred(freq_twitter$string[1:10], 5, testdata, 0.001)
+mtxwordpred(freq_twitter$string[1:10], 9, testdata, 0.001)
 ```
 
-So, besides string N°4 ("a", whose next-word predictions vary between 3 possible values: "few", "great" and "lot") the rest had pretty stable predictions.
+So, with 10 iterations, pretty stable predictions were obtained.
 
 ##### Function that identifies the most frequent value within a row of a matrix
 ```{r}
@@ -560,12 +578,12 @@ vectwordpred <- function(stringvect, numpred, datatest, sampdata) {
 }
 ```
 
-As an example, when applied to the previously used subset of freq_twitter$string (with 5 predicted next words, within a dataset 1% of testdata):
+As an example, when applied to the previously used subset of freq_twitter$string (with 5 predicted next words, within a dataset 0.1% of testdata):
 ```{r, cache = TRUE}
-vectwordpred(freq_twitter$string[1:10], 5, testdata, 0.001)
+vectwordpred(freq_twitter$string[1:10], 10, testdata, 0.001)
 ```
 
-Again, the "a" string obtains 4 possible solutions, out of which "few" was selected (either by frequency or by randomly selecting one out of all that share the same frequency).
+This time, the "a" string obtains 5 possible solutions, out of which "little" was selected (either by frequency or by randomly selecting one out of all that share the same frequency).  Therefore, a higher "sampdata" value might be the solution for a more representative result.
 
 #### Obtained Results
 
@@ -585,7 +603,7 @@ Obtained input dataset:
 glimpse(popular1grams_final)
 ```
 
-Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 0.5% of testdata:
+Applying vectwordpred function to the obtained input, with 10 predicted next words, within a dataset 0.5% of testdata (5x the sample used previously):
 ```{r, cache = TRUE}
 wordpred1grams <- vectwordpred(popular1grams_final$string, 10, testdata, 0.005)
 ```
@@ -631,31 +649,45 @@ popular4grams <- ngramsetfreq(ngram = 4, dataset = sample(testdata, 20000))
 ```
 
 ```{r, cache = TRUE}
-popular4grams_final <- stringselect(popular4grams, .85)
+popular4grams_final <- stringselect(popular4grams, .9)
 ```
 
 ```{r, cache = TRUE}
 wordpred4grams <- vectwordpred(popular4grams_final$string, 10, testdata, 0.01)
 ```
 
+##### 5-grams
+```{r, cache = TRUE}
+popular5grams <- ngramsetfreq(ngram = 5, dataset = sample(testdata, 20000))
+```
+
+% cut for the freq variable, was lowered down to 75% in order to obtain all results with freq >= 2. The obtained length reflects the fact that beyond 4grams, pre-processed datasets' added value goes down quickly:
+```{r, cache = TRUE}
+popular5grams_final <- stringselect(popular5grams, .75)
+```
+
+```{r, cache = TRUE}
+wordpred5grams <- vectwordpred(popular5grams_final$string, 10, testdata, 0.01)
+```
+
 ##### Final popular n-grams dataset
 Binding "popularNgrams_final" tables:
 ```{r, echo = TRUE}
-wordpredgrams <- bind_rows(wordpred1grams, wordpred2grams, wordpred3grams, wordpred4grams)
+wordpredgrams <- bind_rows(wordpred1grams, wordpred2grams, wordpred3grams, wordpred4grams, wordpred5grams)
 ```
 
 Further fine tunning of the pre-calculated n-gram dataset, could be based on:
 
-1. Modifying the size of each dataset when applying stringselect function (currently between 85 and 90%).
+1. Modifying the size of each dataset when applying stringselect function (currently between at 90%).
 2. Modifying the % of testdata ("sampdata" parameter) when applying the vectwordpred function (currently between 0.5 and 1%).
 3. Imposing a minimum "unique" value (50% of the numpred value, for example) in wordpredNgrams datasets (cases with "unique" = 10 when "numpred" = 10 means a total random result that may as well not be elegible for pre-calculated predictions).
 
-Major considerations: processing time and precision.
+Major considerations: processing time vs precision.
 
 ### IV.b. Mixed and Final Solution
 
 #### stringsure function's upgrade into a mixed search criteria
-This function was stripped from the initial input string's format check (transfered to the wordpredfinal function) and added an extra search criteria, consisting on always conducting the next search, after an n-gram reduction, whithin the pre-calculated n-grams dataset(ngramdata = wordpredgrams).  If unsuccessful, it applies the original stringsure's search criteria within the corresponding dataset (stringdata = sample of testdata).  Therefore it also absorbed previous wordpred2 function.
+This function was stripped from the initial input string's format check (transfered to the wordpredfinal function) and added an extra search criteria, consisting on always conducting the next search, after an n-gram reduction, whithin the pre-calculated n-grams dataset (ngramdata = wordpredgrams).  If unsuccessful, it applies the original stringsure's search criteria within the corresponding dataset (stringdata = sample of testdata), and so on.  Therefore it absorbed wordpred2's functionalities.
 
 ```{r}
 stringsurefinal <- function(string, ngramdata, stringdata) {
@@ -706,11 +738,11 @@ stringsurefinal <- function(string, ngramdata, stringdata) {
 
 
 #### Function that returns the predicted word, with an initial search within the pre-calculated popular n-grams dataset (wordpredgrams)
-It starts by carrying on the input string's format check (converting the input string into the same wordpredfinal$string format). If there is no direct match within the pre-calculated n-grams dataset, it continues by reducing the string's n-gram by 1 (by removing the first word) and searching within the pre-calculated n-grams dataset (wordpredgrams), until either a successful search takes place or the string's n-gram goes down to the "strlength" parameter. Beyond the "strlength" n-gram threshold, all additional predictions are conducted through the stringsurefinal function, within a testdata sample (defined by the "precision" parameter).
+It starts by carrying on the input string's format check (converting the input string into the same wordpredfinal$string format) and reducing its ngram down to "ngramlength" (5 ended up being the number, beyond which very few succesfull searches were obtained) . If there's no direct match within the pre-calculated n-grams dataset, all additional predictions are conducted through the stringsurefinal function, within a testdata sample (defined by the "precision" parameter).
 
 ```{r}
 wordpredfinal <- function(string, precision, ngramdata, stringdata) {
-        ngramlength <- 4
+        ngramlength <- 5
         strsearch <- str_to_lower(string) %>%
                 str_extract_all(., boundary("word")) %>%
                 unlist(., use.names = FALSE) %>%
@@ -734,6 +766,4 @@ wordpredfinal <- function(string, precision, ngramdata, stringdata) {
 }
 ```
 
-1. VER SI VALE LA PENA REEMPLAZAR SÍMBOLO "â" POR "'"
-2. AGREGAR 5GRAMS A WORDPREDGRAMS / AJUSTAR LOS OTROS (SI APLICA POR 1)
-3. PASAR A DATA PRODUCT + PPT!
+PASAR A DATA PRODUCT + PPT!
