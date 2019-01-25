@@ -694,18 +694,12 @@ stringsurefinal <- function(string, ngramdata, stringdata) {
         strlength <- str_count(string, boundary("word"))
         strsearch <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "")
         strwhere <- str_which(stringdata, strsearch)
-        print(head(strwhere))
         strdisp <- length(strwhere)
-        print(strdisp)
-        print(strlength)
-        print(string)
         ngramwhere <- integer(0)
         while(strdisp == 0 & strlength > 1) {
                 string <- word(string, 2, -1)
-                print(string)
                 strlength <- str_count(string, boundary("word"))
                 ngramwhere <- which(string == ngramdata$string)
-                print(ngramwhere)
                 if(length(ngramwhere) > 0) {
                         ngramresult <- ngramdata$modes[ngramwhere]
                         strdisp <- ngramwhere
@@ -713,17 +707,13 @@ stringsurefinal <- function(string, ngramdata, stringdata) {
                         strsearch <- paste("(?<=(^|\\s))", string, "\\s\\w+", sep = "")
                         strwhere <- str_which(stringdata, strsearch)
                         strdisp <- length(strwhere)
-                        print(strdisp)
                 }
         }
         if(strdisp > 0) {
                 if(length(ngramwhere) >0) {
                         result <- ngramresult
                 } else {
-                        print(head(strwhere))
-                        print(head(stringdata[strwhere]))
                         result <- stringset(string , stringdata[strwhere]) %>%
-                                print(.) %>%
                                 filter(., freq == max(freq)) %>%
                                 sample_n(., 1) %>%
                                 select(., string) %>%
@@ -748,17 +738,12 @@ wordpredfinal <- function(string, precision, ngramdata, stringdata) {
                 unlist(., use.names = FALSE) %>%
                 str_flatten(., collapse = " ") %>%
                 if_else(str_count(., boundary("word")) > ngramlength, word(., str_count(., boundary("word")) - ngramlength + 1, -1), .)
-        print(strsearch)
         strlength <- str_count(strsearch, boundary("word"))
-        print(strlength)
         ngramwhere <- which(strsearch == ngramdata$string)
-        print(ngramwhere)
-        print(length(ngramwhere))
         if(length(ngramwhere) > 0) {
                 result <- ngramdata$modes[ngramwhere]
         } else {
                 samplength <- ceiling(length(testdata) * precision)
-                print(samplength)
                 stringdata <- sample(stringdata, samplength)
                 result <- stringsurefinal(strsearch, ngramdata, stringdata)
         }
@@ -766,4 +751,30 @@ wordpredfinal <- function(string, precision, ngramdata, stringdata) {
 }
 ```
 
-PASAR A DATA PRODUCT + PPT!
+### IV.c. Performance Testing
+
+#### Case 1: String available in ngram pre-calculated dataset
+String to use was selected from the last values of said dataset:
+```{r, echo = TRUE}
+tail(wordpredgrams)
+```
+
+Using the microbenchmark library, the test was conducted using a longer string, based on the last value of the previous table.  Additionally the "precision" parameter was set up to the values 0.1, 0.15 and 0.2 (10%, 15% and 20% of the testdata dataset).  Length of testdata dataset (number of strings to search from), associated to the previous values, were more or less: 352k, 528k and 704k.  Setting the number of iterations to 5, the following results were obtained:
+```{r, echo = TRUE}
+microbenchmark(wordpredfinal("the best you treat yourself, the more energy you", .1, wordpredgrams, testdata), wordpredfinal("the best you treat yourself the more energy you", .15, wordpredgrams, testdata), wordpredfinal("the best you treat yourself the more energy you", .2, wordpredgrams, testdata), times = 5)
+```
+
+So when dealing with strings available in the pre-calculated ngram dataset, the size of the "precision" parameter, within the interval 0.1 - 0.2, regarding the median processing time, is irrelevant (the result was always obtained in a small fraction of a second).
+
+#### Case 2: String not available in ngram pre-calculated dataset
+First, a word not available in the dataset, was selected to create the testing string.
+```{r}
+"specifically" %in% wordpredgrams$string
+```
+
+Therefore the string "i would like to know, specifically" was used, applying the same previous parameters, plus an extra case with "precision" set to 5% (176k strings to search from the testdata dataset) as follows:
+```{r, echo = TRUE}
+microbenchmark(wordpredfinal("i would like to know, specifically", .05, wordpredgrams, testdata), wordpredfinal("i would like to know, specifically", .1, wordpredgrams, testdata), wordpredfinal("i would like to know, specifically", .15, wordpredgrams, testdata), wordpredfinal("i would like to know, specifically", .2, wordpredgrams, testdata), times = 5)
+```
+
+Interestingly enough, a pretty linear response was obtained, starting with less than a second for a 5% "precision" parameter, up to more than 3 seconds for a 20% value.  Considering the response time as a critical performance variable, and imposing its max value to be close to 1 second, it was decided to set the "precision" parameter to 0.075 (that meant securing 264k testdata strings to the analysis, which is more than 10 times the value used to determine the most popular ngrams -20000-).
