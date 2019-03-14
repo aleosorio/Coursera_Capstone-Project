@@ -2,7 +2,9 @@
 title: "Data Science Specialization Capstone Project"
 author: "Alejandro Osorio"
 date: "September 2018"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -40,7 +42,7 @@ datatwitter <- readLines(con)
 close(con)
 ```
 
-Given the warning, the dimensions of both the obtained tibble and the original file, were compared.  They were equal.  Additionally, after some basic visual comparisons (head, tail, str, is.na), it was concluded that the obtained tibble was ok to work with.
+Given the warning, the dimensions of both the obtained tibble and the original file, were compared.  They were equal.  Additionally, after some basic visual comparisons (head, tail, str, is.na), it was concluded that the obtained vector was ok to work with.
 
 #### Blogs Dataset
 ```{r, cache = TRUE}
@@ -49,7 +51,7 @@ datablogs <- readLines(con)
 close(con)
 ```
 
-After the same basic visual comparisons (head, tail, str, is.na) used with the previous dataset, it was concluded that the obtained tibble was also ok to work with.
+After the same basic visual comparisons (head, tail, str, is.na) used with the previous dataset, it was concluded that the obtained vector was also ok to work with.
 
 #### News Dataset
 ```{r, cache = TRUE}
@@ -90,7 +92,7 @@ splitsentences <- function(dataset) {
 ```
 
 Applying the function to original datasets:
-```{r}
+```{r, cache = TRUE}
 words_twitter <- splitsentences(datatwitter)
 words_blogs <- splitsentences(datablogs)
 words_news <- splitsentences(datanews)
@@ -130,12 +132,12 @@ words_news[2:4]
 
 Some rows show words weren't useful for predictive modeling, such as:
 ```{r}
-words_news[16]
+words_news[15]
 ```
 
 Eventhough it's english written, the extra work needed to clean such cases was considered unnecesary.  Instead, a language detector (library "cld3") was used to filter such cases.  As an example:
 ```{r}
-detect_language(words_news[16])
+detect_language(words_news[15])
 ```
 
 The result "bg-Latn" doesn't match the expected one: "en" (which stands for english).  Therefore, all three datasets were filtered from rows other than "en", using the following function:
@@ -200,7 +202,7 @@ ngramrow <- function(ngram, dataset, rownum) {
 As an example follows a 3-gram generation, using the 3rd row of the news data:
 
 3-gram:
-```{r, echo = FALSE}
+```{r, cache = TRUE, echo = FALSE}
 head(ngramrow(ngram = 3, dataset = final_news, rownum = 3), 5)
 ```
 
@@ -331,12 +333,12 @@ ngrampred <- function(string, dataset) {
 ```
 
 As an example, if applied with the 2-gram "on the":
-```{r}
+```{r, cache = TRUE}
 head(ngrampred(string = "on the", dataset = samplengram), 3)
 ```
 
 Likewise, if applied with the 4-gram "and a case of":
-```{r}
+```{r, cache = TRUE}
 head(ngrampred(string = "and a case of", dataset = samplengram), 3)
 ```
 It can be seen that, as there were no 5-grams including the string "and a case of <word>", the function then reduced the search string to "a case of" and then searched for a 4-gram that included said string ("a case of <word>"), and so forth until it found the solutions.
@@ -356,7 +358,7 @@ wordpred <- function(string, dataset) {
 ```
 
 As an example, if applied again with the 4-gram string "and a case of":
-```{r}
+```{r, cache = TRUE}
 wordpred(string = "and a case of", dataset = samplengram)
 ```
 
@@ -395,7 +397,7 @@ stringrow <- function(string, dataset, numrow) {
 ```
 
 As an example, if applied with the string "plans" to the 4rth row of the news dataset:
-```{r}
+```{r, cache = TRUE}
 stringrow("plans", final_news, numrow = 4)
 ```
 
@@ -418,7 +420,7 @@ stringset <- function(string, dataset) {
 ```
 
 As an example, if applied with the string "to the" to a small sample of the testdata dataset:
-```{r}
+```{r, cache = TRUE}
 head(stringset("to the", sample(testdata, 5000)), 5)
 ```
 
@@ -511,7 +513,7 @@ stringselect <- function(inputdf, cutperc) {
 ```
 
 As an example, if applied to the 1-gram frequency twitter dataset previously obtained (in II.b.), with a 80% threshold, the following "tail" was obtained:
-```{r}
+```{r, cache = TRUE}
 tail(stringselect(freq_twitter, .8))
 ```
 
@@ -538,13 +540,13 @@ mtxwordpred <- function(stringvect, numpred, datatest, sampdata) {
 As an example, the results obtained with a subset of freq_twitter$string as a 1-gram input vector, were the following:
 
 1. Input string vector:
-```{r}
+```{r, cache = TRUE}
 freq_twitter$string[1:10]
 ```
 
-2. Output obtained, with 9 predicted next words, within a dataset 1% of testdata:
+2. Output obtained, with 8 predicted next words, within a dataset 1% of testdata:
 ```{r, cache = TRUE}
-mtxwordpred(freq_twitter$string[1:10], 9, testdata, 0.001)
+mtxwordpred(freq_twitter$string[1:10], 8, testdata, 0.001)
 ```
 
 So, with 10 iterations, pretty stable predictions were obtained.
@@ -560,7 +562,7 @@ freqvals <- function(x) {
 ```
 
 As an example, when applied to a sring vector (it can return one or more solutions):
-```{r}
+```{r, cache = TRUE}
 freqvals(c("hello", "bye", "one", "hello", "bye", "two"))
 ```
 
@@ -755,12 +757,12 @@ wordpredfinal <- function(string, precision, ngramdata, stringdata) {
 
 #### Case 1: String available in ngram pre-calculated dataset
 String to use was selected from the last values of said dataset:
-```{r, echo = TRUE}
+```{r, cache = TRUE, echo = TRUE}
 tail(wordpredgrams)
 ```
 
 Using the microbenchmark library, the test was conducted using a longer string, based on the last value of the previous table.  Additionally the "precision" parameter was set up to the values 0.1, 0.15 and 0.2 (10%, 15% and 20% of the testdata dataset).  Length of testdata dataset (number of strings to search from), associated to the previous values, were more or less: 352k, 528k and 704k.  Setting the number of iterations to 5, the following results were obtained:
-```{r, echo = TRUE}
+```{r, cache = TRUE, echo = TRUE}
 microbenchmark(wordpredfinal("the best you treat yourself, the more energy you", .1, wordpredgrams, testdata), wordpredfinal("the best you treat yourself the more energy you", .15, wordpredgrams, testdata), wordpredfinal("the best you treat yourself the more energy you", .2, wordpredgrams, testdata), times = 5)
 ```
 
@@ -773,7 +775,7 @@ First, a word not available in the dataset, was selected to create the testing s
 ```
 
 Therefore the string "i would like to know, specifically" was used, applying the same previous parameters, plus an extra case with "precision" set to 5% (176k strings to search from the testdata dataset) as follows:
-```{r, echo = TRUE}
+```{r, cache = TRUE, echo = TRUE}
 microbenchmark(wordpredfinal("i would like to know, specifically", .05, wordpredgrams, testdata), wordpredfinal("i would like to know, specifically", .1, wordpredgrams, testdata), wordpredfinal("i would like to know, specifically", .15, wordpredgrams, testdata), wordpredfinal("i would like to know, specifically", .2, wordpredgrams, testdata), times = 5)
 ```
 
